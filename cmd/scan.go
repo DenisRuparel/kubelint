@@ -54,6 +54,10 @@ var scanCmd = &cobra.Command{
 				// Step 6: ConfigMap-specific validation
 				configMapResults := validators.ValidateConfigMap(file)
 				results = append(results, configMapResults...)
+
+				// Step 7: Secret-specific validation
+				secretResults := validators.ValidateSecret(file)
+				results = append(results, secretResults...)
 			}
 
 			fmt.Println()
