@@ -35,9 +35,15 @@ var scanCmd = &cobra.Command{
 
 			// Continue only if syntax is valid
 			if syntaxResult.Severity != validators.Critical {
+				// Step 2: Common validation for all resources
+				commonResults := validators.ValidateCommon(file)
+				results = append(results, commonResults...)
+
+				// Step 3: Structure validation
 				structureResult := validators.ValidateStructure(file)
 				results = append(results, structureResult)
 
+				// Step 4: Deployment-specific validation
 				deploymentResults := validators.ValidateDeployment(file)
 				results = append(results, deploymentResults...)
 			}

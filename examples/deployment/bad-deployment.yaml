@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: broken-syntax-app
+  namespace: dev
+  labels:
+    app: broken-app
+
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: broken-app
+
+  template:
+    metadata:
+      labels:
+        app: broken-app
+
+    spec:
+      containers:
+        - name: app
+          image nginx:latest
+          ports:
+            - containerPort: 80
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits
+              cpu: "500m"
+              memory: "512Mi"
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
