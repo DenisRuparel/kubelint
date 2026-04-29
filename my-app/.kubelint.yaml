@@ -1,0 +1,7 @@
+rules:
+  checkResources: true
+  checkProbes: true
+  checkSecurity: true
+
+severity:
+  failOn: high

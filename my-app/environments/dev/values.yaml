@@ -1,0 +1,36 @@
+appName: sample-app
+namespace: dev
+environment: development
+
+replicas: 1
+
+image:
+  repository: nginx
+  tag: "latest"
+
+service:
+  name: sample-service
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "250m"
+    memory: "256Mi"
+
+configMap:
+  name: sample-config
+  logLevel: debug
+
+secret:
+  name: sample-secret
+  dbUsername: devuser
+  dbPassword: devpassword
+
+ingress:
+  name: sample-ingress
+  host: dev.sample-app.local
