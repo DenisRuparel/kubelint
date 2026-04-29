@@ -46,6 +46,10 @@ var scanCmd = &cobra.Command{
 				// Step 4: Deployment-specific validation
 				deploymentResults := validators.ValidateDeployment(file)
 				results = append(results, deploymentResults...)
+
+				// Step 5: Service-specific validation
+				serviceResults := validators.ValidateService(file)
+				results = append(results, serviceResults...)
 			}
 
 			fmt.Println()
