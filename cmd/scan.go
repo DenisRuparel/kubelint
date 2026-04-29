@@ -50,6 +50,10 @@ var scanCmd = &cobra.Command{
 				// Step 5: Service-specific validation
 				serviceResults := validators.ValidateService(file)
 				results = append(results, serviceResults...)
+
+				// Step 6: ConfigMap-specific validation
+				configMapResults := validators.ValidateConfigMap(file)
+				results = append(results, configMapResults...)
 			}
 
 			fmt.Println()
