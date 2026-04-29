@@ -61,6 +61,14 @@ var scanCmd = &cobra.Command{
 				// Step 7: Secret-specific validation
 				secretResults := validators.ValidateSecret(file)
 				results = append(results, secretResults...)
+
+				// Step 8: Ingress-specific validation
+				ingressResults := validators.ValidateIngress(file)
+				results = append(results, ingressResults...)
+
+				// Step 9: Namespace-specific validation
+				namespaceResults := validators.ValidateNamespacePolicy(file)
+				results = append(results, namespaceResults...)
 			}
 
 			fmt.Println()

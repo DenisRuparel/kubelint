@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: production
+  labels:
+    environment: production
+    owner: platform-team
+    managed-by: kubelint
+data:
+  app.properties: |
+    mode=prod
