@@ -11,12 +11,31 @@ import (
 var initCmd = &cobra.Command{
 	Use:   "init [project-name]",
 	Short: "Initialize a production-ready Kubernetes project",
-	Args:  cobra.ExactArgs(1),
+	Args: func(cmd *cobra.Command, args []string) error {
+		// No argument provided
+		if len(args) == 0 {
+			return fmt.Errorf("please provide a project name\nExample: kubelint init my-app")
+		}
+
+		// More than one argument provided
+		if len(args) > 1 {
+			return fmt.Errorf("only one project name is allowed\nExample: kubelint init my-app")
+		}
+
+		// Empty project name check
+		if args[0] == "" {
+			return fmt.Errorf("project name cannot be empty")
+		}
+
+		return nil
+	},
 
 	Run: func(cmd *cobra.Command, args []string) {
 		projectName := args[0]
 
-		fmt.Println("Initializing KubeLint project...\n")
+		fmt.Println("Initializing KubeLint project...")
+
+    fmt.Println()
 
 		createProject(projectName)
 
