@@ -64,8 +64,6 @@ func Build(projectPath, valuesFile string) (string, error) {
 			continue
 		}
 
-		rendered = fmt.Sprintf("# FILE: %s\n%s", fp, rendered)
-
 		doc := "---\n" + rendered
 		if len(rendered) > 0 && rendered[len(rendered)-1] != '\n' {
 			doc += "\n"
@@ -89,17 +87,17 @@ func Build(projectPath, valuesFile string) (string, error) {
 		final += d
 	}
 
-	if len(errors) > 0 {
-		fmt.Println("\n⚠️ Build Issues:")
-		fmt.Println("---------------------------------")
+	// if len(errors) > 0 {
+	// 	fmt.Println("\n⚠️ Build Issues:")
+	// 	fmt.Println("---------------------------------")
 
-		for _, e := range errors {
-			fmt.Printf("• %s\n", e)
-		}
+	// 	for _, e := range errors {
+	// 		fmt.Printf("• %s\n", e)
+	// 	}
 
-		fmt.Println("---------------------------------")
-		fmt.Printf("Total Errors: %d\n\n", len(errors))
-	}
+	// 	fmt.Println("---------------------------------")
+	// 	fmt.Printf("Total Errors: %d\n\n", len(errors))
+	// }
 
 	return final, nil
 }

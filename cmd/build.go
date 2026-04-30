@@ -80,6 +80,8 @@ var buildCmd = &cobra.Command{
 				continue
 			}
 
+			rendered = fmt.Sprintf("# FILE: %s\n%s", filePath, rendered)
+
 			renderedCount++
 
 			fmt.Println("---")
