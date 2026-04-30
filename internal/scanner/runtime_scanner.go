@@ -21,22 +21,28 @@ type ScanResult struct {
 func ScanRenderedYAML(yamlContent string) ScanResult {
 	var result ScanResult
 
-	// Split multi-doc YAML
 	decoder := yaml.NewDecoder(strings.NewReader(yamlContent))
 
 	for {
-		var parsed map[string]interface{}
+		var node yaml.Node
 
-		err := decoder.Decode(&parsed)
+		err := decoder.Decode(&node)
 		if err != nil {
 			break
 		}
 
-		if parsed == nil {
+		if len(node.Content) == 0 {
 			continue
 		}
 
-		content, _ := yaml.Marshal(parsed)
+		// 👇 THIS IS THE FIX — preserve original YAML
+		content, err := yaml.Marshal(node.Content[0])
+		if err != nil {
+			continue
+		}
+
+		var parsed map[string]interface{}
+		_ = yaml.Unmarshal(content, &parsed)
 
 		var results []validators.ValidationResult
 
@@ -52,7 +58,6 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 		results = append(results, syntax)
 
 		if syntax.Severity != validators.Critical {
-
 			results = append(results, validators.ValidateCommonBytes(content)...)
 			results = append(results, validators.ValidateStructureBytes(content))
 			results = append(results, validators.ValidateDeploymentBytes(content)...)
