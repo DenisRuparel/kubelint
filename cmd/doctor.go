@@ -2,7 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -11,21 +14,153 @@ var doctorCmd = &cobra.Command{
 	Use:   "doctor",
 	Short: "Check system readiness for KubeLint",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Running KubeLint system diagnostics...")
-		fmt.Println()
-		checkCommand("go", "Go")
-		checkCommand("kubectl", "kubectl")
 
-		fmt.Println("\nSystem diagnostics completed.")
+		fmt.Println("\n🔍 KubeLint Doctor Report")
+		fmt.Println("-----------------------------------------")
+		fmt.Println()
+
+		section("📦 Environment")
+		checkCommand("kubectl", "kubectl")
+		checkCommand("docker", "Docker")
+		checkCommand("cue", "CUE (required for Phase 3)")
+
+		fmt.Println()
+
+		section("☸️ Kubernetes")
+
+		checkCluster()
+		checkContext()
+		checkKubectlVersion()
+
+		fmt.Println()
+
+		section("📁 Project")
+
+		checkProjectStructure()
+
+		fmt.Println("------------------------------------------")
+		fmt.Println("✅ Doctor check completed")
+		fmt.Println()
 	},
 }
+
+func init() {
+	rootCmd.AddCommand(doctorCmd)
+}
+
+//////////////////////////////////////////////////////
+// UI HELPERS
+//////////////////////////////////////////////////////
+
+func section(title string) {
+	fmt.Println(title)
+	fmt.Println("------------------------------------------")
+}
+
+func success(msg string) {
+	fmt.Printf("\033[32m✔ %s\033[0m\n", msg)
+}
+
+func warn(msg string) {
+	fmt.Printf("\033[33m⚠ %s\033[0m\n", msg)
+}
+
+func fail(msg string) {
+	fmt.Printf("\033[31m✖ %s\033[0m\n", msg)
+}
+
+//////////////////////////////////////////////////////
+// CHECKS
+//////////////////////////////////////////////////////
 
 func checkCommand(command string, name string) {
 	_, err := exec.LookPath(command)
 	if err != nil {
-		fmt.Printf("✗ %s is NOT installed\n", name)
+		fail(fmt.Sprintf("%s is NOT installed", name))
+		return
+	}
+	success(fmt.Sprintf("%s is installed", name))
+}
+
+//////////////////////////////////////////////////////
+// KUBERNETES CHECKS
+//////////////////////////////////////////////////////
+
+func checkCluster() {
+	cmd := exec.Command("kubectl", "cluster-info")
+	err := cmd.Run()
+	if err != nil {
+		fail("Cannot connect to Kubernetes cluster")
+		fmt.Println("   💡 Run: kubectl config use-context <context>")
+		return
+	}
+	success("Kubernetes cluster reachable")
+}
+
+func checkContext() {
+	out, err := exec.Command("kubectl", "config", "current-context").Output()
+	if err != nil {
+		fail("Unable to get current context")
 		return
 	}
 
-	fmt.Printf("✓ %s is installed\n", name)
+	context := strings.TrimSpace(string(out))
+	success(fmt.Sprintf("Current Context: %s", context))
+
+	nsOut, err := exec.Command("kubectl", "config", "view", "--minify", "--output", "jsonpath={..namespace}").Output()
+	if err != nil {
+		warn("Could not determine default namespace")
+		return
+	}
+
+	namespace := strings.TrimSpace(string(nsOut))
+	if namespace == "" {
+		namespace = "default"
+	}
+	success(fmt.Sprintf("Default Namespace: %s", namespace))
+}
+
+func checkKubectlVersion() {
+	out, err := exec.Command("kubectl", "version", "--client", "--short").Output()
+	if err != nil {
+		warn("Could not determine kubectl version")
+		return
+	}
+
+	version := strings.TrimSpace(string(out))
+	success(fmt.Sprintf("kubectl version: %s", version))
+}
+
+//////////////////////////////////////////////////////
+// PROJECT CHECKS
+//////////////////////////////////////////////////////
+
+func checkProjectStructure() {
+	cwd, _ := os.Getwd()
+
+	templatesPath := filepath.Join(cwd, "templates")
+	valuesPath := filepath.Join(cwd, "templates", "values.yaml")
+
+	if _, err := os.Stat(templatesPath); os.IsNotExist(err) {
+		fail("templates/ folder not found (not a KubeLint project)")
+		fmt.Println("   💡 Run: kubelint init")
+		return
+	}
+
+	success("templates/ folder found")
+
+	if _, err := os.Stat(valuesPath); os.IsNotExist(err) {
+		fail("values.yaml not found inside templates/")
+		return
+	}
+
+	success("values.yaml found")
+
+	files, err := os.ReadDir(templatesPath)
+	if err != nil || len(files) == 0 {
+		warn("No template files found")
+		return
+	}
+
+	success(fmt.Sprintf("Found %d template files", len(files)))
 }
