@@ -226,9 +226,9 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ .global.service.name }}
+                name: {{ .service.name }}
                 port:
-                  number: {{ .global.service.port }}
+                  number: {{ .service.port }}
 `
 }
 
@@ -293,20 +293,19 @@ deployment:
   image:
     repository: nginx
     tag: "latest"
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
 
 service:
   name: sample-service
   type: ClusterIP
   port: 80
   targetPort: 80
-
-resources:
-  requests:
-    cpu: "250m"
-    memory: "256Mi"
-  limits:
-    cpu: "500m"
-    memory: "512Mi"
 
 configMap:
   name: sample-config

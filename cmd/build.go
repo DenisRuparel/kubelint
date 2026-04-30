@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/DenisRuparel/kubelint/internal/loader"
+	"github.com/DenisRuparel/kubelint/internal/renderer"
 	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
@@ -25,9 +26,9 @@ var buildCmd = &cobra.Command{
 		}
 
 		fmt.Println("Starting KubeLint build...")
-		fmt.Println("Project:", projectPath)
-		fmt.Println("Templates:", templateDir)
-		fmt.Println("Values file:", valuesFile)
+		// fmt.Println("Project:", projectPath)
+		// fmt.Println("Templates:", templateDir)
+		// fmt.Println("Values file:", valuesFile)
 
 		// Check paths
 		if _, err := os.Stat(templateDir); os.IsNotExist(err) {
@@ -40,7 +41,7 @@ var buildCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Println("✔ Paths validated successfully")
+		// fmt.Println("✔ Paths validated successfully")
 
 		values, err := loader.LoadValues(valuesFile)
 		if err != nil {
@@ -48,10 +49,43 @@ var buildCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Println("✔ Values loaded successfully")
+		// fmt.Println("✔ Values loaded successfully")
 
-		// Debug (temporary)
-		fmt.Printf("Loaded values: %+v\n", values)
+		// Read templates directory
+		files, err := os.ReadDir(templateDir)
+		if err != nil {
+			fmt.Println("❌ Failed to read templates directory")
+			return
+		}
+
+		fmt.Println("\nRendering templates...")
+
+		fmt.Println()
+
+		for _, file := range files {
+			if file.IsDir() {
+				continue
+			}
+
+			if file.Name() == "values.yaml" {
+				continue
+			}
+
+			filePath := filepath.Join(templateDir, file.Name())
+
+			rendered, err := renderer.RenderTemplate(filePath, values)
+			if err != nil {
+				fmt.Printf("❌ Error rendering %s: %v\n", file.Name(), err)
+				continue
+			}
+
+			fmt.Println("---")
+			fmt.Print(rendered)
+
+			if rendered[len(rendered)-1] != '\n' {
+				fmt.Println()
+			}
+		}
 	},
 }
 
