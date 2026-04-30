@@ -101,50 +101,53 @@ func ValidateCommon(filePath string) []ValidationResult {
 }
 
 // ValidateCommonBytes is a helper for validating YAML content directly
+
 func ValidateCommonBytes(content []byte) []ValidationResult {
 	var results []ValidationResult
 
-	var node yaml.Node
-	err := yaml.Unmarshal(content, &node)
-	if err != nil {
+	var root yaml.Node
+	if err := yaml.Unmarshal(content, &root); err != nil {
 		return []ValidationResult{
 			{
 				Severity: Critical,
-				Message:  "Invalid YAML structure",
+				Message:  "Invalid YAML",
 			},
 		}
 	}
 
-	if len(node.Content) == 0 {
+	if len(root.Content) == 0 {
 		return results
 	}
 
-	doc := node.Content[0]
+	doc := root.Content[0] // actual document
 
 	var apiVersion, kind, name string
 	var hasMetadata bool
 
 	for i := 0; i < len(doc.Content); i += 2 {
 		key := doc.Content[i].Value
-		value := doc.Content[i+1]
+		val := doc.Content[i+1]
 
 		switch key {
+
 		case "apiVersion":
-			apiVersion = value.Value
+			apiVersion = val.Value
+
 		case "kind":
-			kind = value.Value
+			kind = val.Value
+
 		case "metadata":
 			hasMetadata = true
 
-			for j := 0; j < len(value.Content); j += 2 {
-				if value.Content[j].Value == "name" {
-					name = value.Content[j+1].Value
+			for j := 0; j < len(val.Content); j += 2 {
+				if val.Content[j].Value == "name" {
+					name = val.Content[j+1].Value
 				}
 			}
 		}
 	}
 
-	// ✅ Correct checks
+	// 🔥 THESE WILL NOW WORK CORRECTLY
 	if apiVersion == "" {
 		results = append(results, ValidationResult{
 			Severity: Critical,
