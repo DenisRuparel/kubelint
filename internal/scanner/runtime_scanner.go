@@ -4,7 +4,6 @@ import (
 	"fmt"
 	validators "github.com/DenisRuparel/kubelint/internal/validator"
 	"gopkg.in/yaml.v3"
-	"io"
 	"strings"
 )
 
@@ -22,43 +21,27 @@ type ScanResult struct {
 func ScanRenderedYAML(yamlContent string) ScanResult {
 	var result ScanResult
 
-	var fileName string
-
 	docs := strings.Split(yamlContent, "---")
 
-	for _, d := range docs {
-		d = strings.TrimSpace(d)
-		if d == "" {
+	for _, docStr := range docs {
+
+		docStr = strings.TrimSpace(docStr)
+		if docStr == "" {
 			continue
 		}
 
-		lines := strings.Split(d, "\n")
+		// 🔥 Extract fileName per document
+		var fileName string
+		lines := strings.Split(docStr, "\n")
 		if len(lines) > 0 && strings.HasPrefix(lines[0], "# FILE:") {
 			fileName = strings.TrimSpace(strings.TrimPrefix(lines[0], "# FILE:"))
-			break
 		}
-	}
 
-	// 🔥 validate full YAML ONCE
-	syntax := validators.ValidateYAMLSyntaxBytes([]byte(yamlContent))
+		content := []byte(docStr)
 
-	if syntax.Severity == validators.Critical {
-		result.Issues = append(result.Issues, syntax)
-		result.Summary.Critical++
-		return result
-	}
-
-	decoder := yaml.NewDecoder(strings.NewReader(yamlContent))
-
-	for {
-		var node yaml.Node
-
-		err := decoder.Decode(&node)
+		// 🔥 Syntax validation per document
+		err := yaml.Unmarshal(content, &map[string]interface{}{})
 		if err != nil {
-			if err == io.EOF {
-				break
-			}
-
 			msg := err.Error()
 			msg = strings.Replace(msg, "yaml:", "", 1)
 			msg = strings.TrimSpace(msg)
@@ -72,33 +55,10 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 			})
 
 			result.Summary.Critical++
-			return result
-		}
-
-		if len(node.Content) == 0 {
 			continue
 		}
 
-		// 👇 THIS IS THE FIX — preserve original YAML
-		if node.Kind != yaml.DocumentNode || len(node.Content) == 0 {
-			continue
-		}
-
-		doc := node.Content[0]
-
-		content, err := yaml.Marshal(doc)
-		if err != nil {
-			continue
-		}
-
-		// 🔥 Extract file name from injected comment
-		var fileName string
-
-		lines := strings.Split(string(content), "\n")
-		if len(lines) > 0 && strings.HasPrefix(lines[0], "# FILE:") {
-			fileName = strings.TrimSpace(strings.TrimPrefix(lines[0], "# FILE:"))
-		}
-
+		// 🔥 Continue with your existing validators
 		var parsed map[string]interface{}
 		_ = yaml.Unmarshal(content, &parsed)
 
@@ -123,21 +83,16 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 			resourceID = fmt.Sprintf("%s/%s", kind, name)
 		}
 
-		// YAML syntax
-		docSyntax := validators.ValidateYAMLSyntaxBytes(content)
-		results = append(results, docSyntax)
-
-		if docSyntax.Severity != validators.Critical {
-			results = append(results, validators.ValidateCommonBytes(content)...)
-			results = append(results, validators.ValidateStructureBytes(content))
-			results = append(results, validators.ValidateDeploymentBytes(content)...)
-			results = append(results, validators.ValidateSecurityBytes(content)...)
-			results = append(results, validators.ValidateServiceBytes(content)...)
-			results = append(results, validators.ValidateConfigMapBytes(content)...)
-			results = append(results, validators.ValidateSecretBytes(content)...)
-			results = append(results, validators.ValidateIngressBytes(content)...)
-			results = append(results, validators.ValidateNamespacePolicyBytes(content)...)
-		}
+		// run validators
+		results = append(results, validators.ValidateCommonBytes(content)...)
+		results = append(results, validators.ValidateStructureBytes(content))
+		results = append(results, validators.ValidateDeploymentBytes(content)...)
+		results = append(results, validators.ValidateSecurityBytes(content)...)
+		results = append(results, validators.ValidateServiceBytes(content)...)
+		results = append(results, validators.ValidateConfigMapBytes(content)...)
+		results = append(results, validators.ValidateSecretBytes(content)...)
+		results = append(results, validators.ValidateIngressBytes(content)...)
+		results = append(results, validators.ValidateNamespacePolicyBytes(content)...)
 
 		for _, r := range results {
 
@@ -161,6 +116,5 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 			}
 		}
 	}
-
 	return result
 }
