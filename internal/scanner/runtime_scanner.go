@@ -44,7 +44,9 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 			continue
 		}
 
-		content, err := yaml.Marshal(node)
+		doc := node.Content[0]
+
+		content, err := yaml.Marshal(doc)
 		if err != nil {
 			continue
 		}
