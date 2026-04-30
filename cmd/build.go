@@ -12,7 +12,6 @@ import (
 )
 
 var valuesFile string
-
 var finalOutput string
 
 var buildCmd = &cobra.Command{
@@ -58,13 +57,10 @@ var buildCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Println("\nRendering templates...")
-
-		fmt.Println()
-
 		var errors []string
 		renderedCount := 0
 
+		// 🔥 DO NOT PRINT YAML HERE
 		for _, file := range files {
 			if file.IsDir() || file.Name() == "values.yaml" {
 				continue
@@ -80,17 +76,12 @@ var buildCmd = &cobra.Command{
 				continue
 			}
 
+			// attach file metadata
 			rendered = fmt.Sprintf("# FILE: %s\n%s", filePath, rendered)
 
 			renderedCount++
 
-			fmt.Println("---")
-			fmt.Print(rendered)
-
-			if len(rendered) > 0 && rendered[len(rendered)-1] != '\n' {
-				fmt.Println()
-			}
-
+			// accumulate ONLY
 			finalOutput += "---\n"
 			finalOutput += rendered
 
@@ -99,6 +90,7 @@ var buildCmd = &cobra.Command{
 			}
 		}
 
+		// 🔍 VALIDATE
 		scanResult := scanner.ScanRenderedYAML(finalOutput)
 		summary := scanResult.Summary
 
@@ -109,34 +101,43 @@ var buildCmd = &cobra.Command{
 		fmt.Printf("INFO     : %d\n", summary.Info)
 		fmt.Println("---------------------------------")
 
+		// ❌ FAILURE CASE
 		if summary.Critical > 0 {
 			fmt.Println("\n⚠️ Build Issues detected:")
 			fmt.Println("---------------------------------")
+
 			for _, issue := range scanResult.Issues {
 				if issue.Severity == validators.Critical {
 					fmt.Printf("• %s\n", issue.Message)
 				}
 			}
+
 			fmt.Println("---------------------------------")
-			fmt.Println()
-			fmt.Printf("Total Errors: %d\n", len(scanResult.Issues))
-			fmt.Println()
-			fmt.Println("❌ Build failed due to critical issues.")
+
+			fmt.Println("\n🚀 Build Summary")
+			fmt.Println("---------------------------------")
+			fmt.Printf("Templates rendered : %d\n", renderedCount)
+			fmt.Printf("Critical Issues    : %d\n", summary.Critical)
+			fmt.Printf("Warnings           : %d\n", summary.Warning)
+			fmt.Printf("Info               : %d\n", summary.Info)
+			fmt.Println("Status             : FAILED ❌")
+			fmt.Println("---------------------------------")
+
 			os.Exit(1)
 		}
 
-		// 🔥 Final summary (FIXED)
+		// ✅ SUCCESS CASE → NOW PRINT YAML
+		fmt.Println("\nRendering templates...")
+		fmt.Println()
+		fmt.Print(finalOutput)
+
 		fmt.Println("\n🚀 Build Summary")
 		fmt.Println("---------------------------------")
 		fmt.Printf("Templates rendered : %d\n", renderedCount)
-		fmt.Printf("Errors             : %d\n", len(scanResult.Issues))
-
-		if len(scanResult.Issues) == 0 {
-			fmt.Println("Status             : SUCCESS ✅")
-		} else {
-			fmt.Println("Status             : PARTIAL ⚠️")
-		}
-
+		fmt.Printf("Critical Issues    : %d\n", summary.Critical)
+		fmt.Printf("Warnings           : %d\n", summary.Warning)
+		fmt.Printf("Info               : %d\n", summary.Info)
+		fmt.Println("Status             : SUCCESS ✅")
 		fmt.Println("---------------------------------")
 	},
 }
