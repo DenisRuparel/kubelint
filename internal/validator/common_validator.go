@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"os"
+	"strings"
 )
 
 // ValidateCommon checks for common fields in Kubernetes manifests
@@ -108,6 +109,39 @@ func ValidateCommonBytes(content []byte) []ValidationResult {
 
 	var parsed map[string]interface{}
 
+	raw := string(content)
+
+	if strings.Contains(raw, "apiVersion:") && !strings.Contains(raw, "apiVersion: ") {
+		results = append(results, ValidationResult{
+			Severity: Critical,
+			Message:  "apiVersion is empty",
+		})
+	}
+
+	if strings.Contains(raw, "kind:") && !strings.Contains(raw, "kind: ") {
+		results = append(results, ValidationResult{
+			Severity: Critical,
+			Message:  "kind is empty",
+		})
+	}
+
+	if strings.Contains(raw, "metadata:") && !strings.Contains(raw, "metadata: ") {
+		results = append(results, ValidationResult{
+			Severity: Critical,
+			Message:  "metadata is empty",
+		})
+	}
+
+	if strings.Contains(raw, "metadata.name:") && !strings.Contains(raw, "metadata.name: ") {
+		results = append(results, ValidationResult{
+			Severity: Critical,
+			Message:  "metadata.name is empty",
+		})
+	}
+
+
+	
+
 	// CRITICAL → apiVersion
 	apiVersion, exists := parsed["apiVersion"]
 
@@ -152,7 +186,7 @@ func ValidateCommonBytes(content []byte) []ValidationResult {
 			Severity: Critical,
 			Message:  "metadata section is missing",
 		})
-	} else{
+	} else {
 		str := fmt.Sprintf("%v", metaRaw)
 		if str == "" || str == "<nil>" {
 			results = append(results, ValidationResult{
@@ -174,7 +208,7 @@ func ValidateCommonBytes(content []byte) []ValidationResult {
 			Severity: Critical,
 			Message:  "metadata.name is missing or empty",
 		})
-	}else {
+	} else {
 		str := fmt.Sprintf("%v", name)
 		if str == "" || str == "<nil>" {
 			results = append(results, ValidationResult{

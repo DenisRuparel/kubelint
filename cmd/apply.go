@@ -69,7 +69,10 @@ var applyCmd = &cobra.Command{
 		out, err := kubectl.CombinedOutput()
 		if err != nil {
 			fmt.Println("❌ kubectl apply failed:")
+			fmt.Println("---------------------------------")
 			fmt.Println(string(out))
+			fmt.Println("---------------------------------")
+			fmt.Println("💡 Tip: Run `kubelint build` to see which resource is broken")
 			os.Exit(1)
 		}
 
