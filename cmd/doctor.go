@@ -169,6 +169,15 @@ func checkKubectlVersion() {
 		l := strings.ToLower(line)
 
 		if strings.Contains(l, "client version") || strings.Contains(l, "clientversion") {
+
+			parts := strings.Split(line, ":")
+			if len(parts) > 1 {
+				version := strings.TrimSpace(parts[1])
+				success(fmt.Sprintf("kubectl version: %s", version))
+				return
+			}
+
+			// fallback if split fails
 			success(strings.TrimSpace(line))
 			return
 		}
