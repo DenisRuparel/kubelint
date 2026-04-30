@@ -2,7 +2,8 @@ package scanner
 
 import (
 	"strings"
-
+	"fmt"
+	"gopkg.in/yaml.v3"
 	"github.com/DenisRuparel/kubelint/internal/validator"
 )
 
@@ -32,6 +33,16 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 		content := []byte(doc)
 
 		var results []validators.ValidationResult
+
+		var parsed map[string]interface{}
+		_ = yaml.Unmarshal(content, &parsed)
+
+		kind, _ := parsed["kind"].(string)
+
+		metadata, _ := parsed["metadata"].(map[string]interface{})
+		name, _ := metadata["name"].(string)
+
+		resourceID := fmt.Sprintf("%s/%s", kind, name)
 
 		// YAML syntax
 		syntax := validators.ValidateYAMLSyntaxBytes(content)
@@ -69,9 +80,15 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 		}
 
 		for _, r := range results {
+
 			// Fix missing severity
 			if r.Severity == "" {
 				r.Severity = validators.Critical
+			}
+
+			// Attach resource info
+			if resourceID != "/" {
+				r.Message = fmt.Sprintf("[%s] %s", resourceID, r.Message)
 			}
 
 			result.Issues = append(result.Issues, r)
