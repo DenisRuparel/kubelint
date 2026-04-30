@@ -95,15 +95,16 @@ var buildCmd = &cobra.Command{
 		scanResult := scanner.ScanRenderedYAML(finalOutput)
 		summary := scanResult.Summary
 
-		fmt.Println("\n🔍 Build Validation")
-		fmt.Println("---------------------------------")
-		fmt.Printf("CRITICAL : %d\n", summary.Critical)
-		fmt.Printf("WARNING  : %d\n", summary.Warning)
-		fmt.Printf("INFO     : %d\n", summary.Info)
-		fmt.Println("---------------------------------")
-
+		
 		// ❌ FAILURE CASE
 		if summary.Critical > 0 {
+			fmt.Println("\n🔍 Build Validation")
+			fmt.Println("---------------------------------")
+			fmt.Printf("CRITICAL : %d\n", summary.Critical)
+			fmt.Printf("WARNING  : %d\n", summary.Warning)
+			fmt.Printf("INFO     : %d\n", summary.Info)
+			fmt.Println("---------------------------------")
+			fmt.Println()
 			fmt.Println("\n⚠️ Build Issues detected:")
 			fmt.Println("---------------------------------")
 
@@ -128,19 +129,19 @@ var buildCmd = &cobra.Command{
 		}
 
 		// ✅ SUCCESS CASE → NOW PRINT YAML
-		fmt.Println("\nRendering templates...")
+		// fmt.Println("\nRendering templates...")
 		fmt.Println()
 		clean := utils.CleanYAML(finalOutput)
 		fmt.Print(clean)
 
-		fmt.Println("\n🚀 Build Summary")
-		fmt.Println("---------------------------------")
-		fmt.Printf("Templates rendered : %d\n", renderedCount)
-		fmt.Printf("Critical Issues    : %d\n", summary.Critical)
-		fmt.Printf("Warnings           : %d\n", summary.Warning)
-		fmt.Printf("Info               : %d\n", summary.Info)
-		fmt.Println("Status             : SUCCESS ✅")
-		fmt.Println("---------------------------------")
+		// fmt.Println("\n🚀 Build Summary")
+		// fmt.Println("---------------------------------")
+		// fmt.Printf("Templates rendered : %d\n", renderedCount)
+		// fmt.Printf("Critical Issues    : %d\n", summary.Critical)
+		// fmt.Printf("Warnings           : %d\n", summary.Warning)
+		// fmt.Printf("Info               : %d\n", summary.Info)
+		// fmt.Println("Status             : SUCCESS ✅")
+		// fmt.Println("---------------------------------")
 	},
 }
 
