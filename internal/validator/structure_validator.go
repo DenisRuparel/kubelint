@@ -7,6 +7,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// ValidateStructure checks if the provided Kubernetes manifest has the required top-level fields (apiVersion, kind, metadata) and performs basic structural validation. It returns a ValidationResult indicating success or detailing any issues found.
+
 func ValidateStructure(filePath string) ValidationResult {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -115,4 +117,43 @@ func getField(node *yaml.Node, field string) *yaml.Node {
 	}
 
 	return nil
+}
+
+// ValidateStructureBytes performs the same structural validation as ValidateStructure but operates on raw YAML content provided as a byte slice. This allows for validating YAML content that may not be stored in a file, such as content from stdin or embedded YAML in other files.
+
+func ValidateStructureBytes(content []byte) ValidationResult {
+	var root yaml.Node
+
+	err := yaml.Unmarshal(content, &root)
+	if err != nil {
+		return ValidationResult{
+			Severity: Critical,
+			Message:  err.Error(),
+		}
+	}
+
+	if len(root.Content) == 0 {
+		return ValidationResult{
+			Severity: Critical,
+			Message:  "Empty YAML document",
+		}
+	}
+
+	doc := root.Content[0]
+
+	requiredFields := []string{"apiVersion", "kind", "metadata"}
+
+	for _, field := range requiredFields {
+		if !hasField(doc, field) {
+			return ValidationResult{
+				Severity: Critical,
+				Message:  "Missing required field: " + field,
+			}
+		}
+	}
+
+	return ValidationResult{
+		Severity: Info,
+		Message:  "Kubernetes structure validation passed",
+	}
 }

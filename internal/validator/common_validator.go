@@ -6,6 +6,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// ValidateCommon checks for common fields in Kubernetes manifests
+
 func ValidateCommon(filePath string) []ValidationResult {
 	var results []ValidationResult
 
@@ -91,6 +93,79 @@ func ValidateCommon(filePath string) []ValidationResult {
 	if _, exists := metadata["annotations"]; !exists {
 		results = append(results, ValidationResult{
 			File:     filePath,
+			Severity: Info,
+			Message:  "metadata.annotations not set (recommended)",
+		})
+	}
+
+	return results
+}
+
+// ValidateCommonBytes is a helper for validating YAML content directly
+
+func ValidateCommonBytes(content []byte) []ValidationResult {
+	var results []ValidationResult
+
+	var parsed map[string]interface{}
+
+	// CRITICAL → apiVersion
+	if _, exists := parsed["apiVersion"]; !exists {
+		results = append(results, ValidationResult{
+			Severity: Critical,
+			Message:  "apiVersion is missing",
+		})
+	}
+
+	// CRITICAL → kind
+	if _, exists := parsed["kind"]; !exists {
+		results = append(results, ValidationResult{
+			Severity: Critical,
+			Message:  "kind is missing",
+		})
+	}
+
+	// CRITICAL → metadata
+	metaRaw, exists := parsed["metadata"]
+	if !exists {
+		results = append(results, ValidationResult{
+			Severity: Critical,
+			Message:  "metadata section is missing",
+		})
+		return results
+	}
+
+	metadata, ok := metaRaw.(map[string]interface{})
+	if !ok {
+		return results
+	}
+
+	// CRITICAL → metadata.name
+	if _, exists := metadata["name"]; !exists {
+		results = append(results, ValidationResult{
+			Severity: Critical,
+			Message:  "metadata.name is missing",
+		})
+	}
+
+	// WARNING → namespace
+	if _, exists := metadata["namespace"]; !exists {
+		results = append(results, ValidationResult{
+			Severity: Warning,
+			Message:  "metadata.namespace is missing",
+		})
+	}
+
+	// WARNING → labels
+	if _, exists := metadata["labels"]; !exists {
+		results = append(results, ValidationResult{
+			Severity: Warning,
+			Message:  "metadata.labels are missing",
+		})
+	}
+
+	// INFO → annotations
+	if _, exists := metadata["annotations"]; !exists {
+		results = append(results, ValidationResult{
 			Severity: Info,
 			Message:  "metadata.annotations not set (recommended)",
 		})
