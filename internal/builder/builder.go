@@ -21,9 +21,13 @@ func Build(projectPath, valuesFile string) (string, error) {
 		valuesFile = filepath.Join(templateDir, "values.yaml")
 	}
 
-	// allow project-relative values path
-	if !filepath.IsAbs(valuesFile) {
-		valuesFile = filepath.Join(projectPath, valuesFile)
+	// Only adjust path if user provided --values
+	if valuesFile != "" {
+		if !filepath.IsAbs(valuesFile) {
+			valuesFile = filepath.Join(projectPath, valuesFile)
+		}
+	} else {
+		valuesFile = filepath.Join(templateDir, "values.yaml")
 	}
 
 	if _, err := os.Stat(valuesFile); os.IsNotExist(err) {
