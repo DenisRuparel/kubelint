@@ -56,6 +56,7 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 
 			// Common
 			results = append(results, validators.ValidateCommonBytes(content)...)
+			fmt.Printf("DEBUG parsed: %+v\n", parsed)
 
 			// Deployment
 			results = append(results, validators.ValidateDeploymentBytes(content)...)
