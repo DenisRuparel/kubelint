@@ -147,7 +147,7 @@ func checkContext() {
 }
 
 func checkKubectlVersion() {
-	out, err := exec.Command("kubectl", "version", "--client").Output()
+	out, err := exec.Command("kubectl", "version", "--client", "|", "grep", "-i", "Client Version").Output()
 	if err != nil {
 		warn("Could not determine kubectl version")
 		return
