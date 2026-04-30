@@ -68,8 +68,14 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 			results = append(results, validators.ValidateNamespacePolicyBytes(content)...)
 		}
 
-		// Count results
 		for _, r := range results {
+			// Fix missing severity
+			if r.Severity == "" {
+				r.Severity = validators.Critical
+			}
+
+			result.Issues = append(result.Issues, r)
+
 			switch r.Severity {
 			case validators.Critical:
 				result.Summary.Critical++
