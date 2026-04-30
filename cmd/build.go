@@ -18,40 +18,33 @@ var buildCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath := args[0]
-
 		templateDir := filepath.Join(projectPath, "templates")
 
-		if valuesFile == "" {
-			valuesFile = filepath.Join(templateDir, "values.yaml")
+		// Resolve values file safely
+		localValuesFile := valuesFile
+		if localValuesFile == "" {
+			localValuesFile = filepath.Join(templateDir, "values.yaml")
 		}
 
 		fmt.Println("Starting KubeLint build...")
-		// fmt.Println("Project:", projectPath)
-		// fmt.Println("Templates:", templateDir)
-		// fmt.Println("Values file:", valuesFile)
 
-		// Check paths
+		// Path checks
 		if _, err := os.Stat(templateDir); os.IsNotExist(err) {
 			fmt.Println("❌ templates folder not found")
 			return
 		}
 
-		if _, err := os.Stat(valuesFile); os.IsNotExist(err) {
+		if _, err := os.Stat(localValuesFile); os.IsNotExist(err) {
 			fmt.Println("❌ values.yaml not found")
 			return
 		}
 
-		// fmt.Println("✔ Paths validated successfully")
-
-		values, err := loader.LoadValues(valuesFile)
+		values, err := loader.LoadValues(localValuesFile)
 		if err != nil {
 			fmt.Println("❌", err)
 			return
 		}
 
-		// fmt.Println("✔ Values loaded successfully")
-
-		// Read templates directory
 		files, err := os.ReadDir(templateDir)
 		if err != nil {
 			fmt.Println("❌ Failed to read templates directory")
@@ -62,12 +55,11 @@ var buildCmd = &cobra.Command{
 
 		fmt.Println()
 
-		for _, file := range files {
-			if file.IsDir() {
-				continue
-			}
+		var errors []string
+		renderedCount := 0
 
-			if file.Name() == "values.yaml" {
+		for _, file := range files {
+			if file.IsDir() || file.Name() == "values.yaml" {
 				continue
 			}
 
@@ -75,17 +67,46 @@ var buildCmd = &cobra.Command{
 
 			rendered, err := renderer.RenderTemplate(filePath, values)
 			if err != nil {
-				fmt.Printf("❌ Error rendering %s: %v\n", file.Name(), err)
+				errors = append(errors,
+					fmt.Sprintf("[%s] %v", file.Name(), err),
+				)
 				continue
 			}
+
+			renderedCount++
 
 			fmt.Println("---")
 			fmt.Print(rendered)
 
-			if rendered[len(rendered)-1] != '\n' {
+			if len(rendered) > 0 && rendered[len(rendered)-1] != '\n' {
 				fmt.Println()
 			}
 		}
+
+		// 🔥 Print build issues (NEW)
+		if len(errors) > 0 {
+			fmt.Println("\n⚠️ Build Issues:")
+			fmt.Println("---------------------------------")
+			for _, e := range errors {
+				fmt.Printf("• %s\n", e)
+			}
+			fmt.Println("---------------------------------")
+			fmt.Printf("Total Errors: %d\n", len(errors))
+		}
+
+		// 🔥 Final summary (FIXED)
+		fmt.Println("\n🚀 Build Summary")
+		fmt.Println("---------------------------------")
+		fmt.Printf("Templates rendered : %d\n", renderedCount)
+		fmt.Printf("Errors             : %d\n", len(errors))
+
+		if len(errors) == 0 {
+			fmt.Println("Status             : SUCCESS ✅")
+		} else {
+			fmt.Println("Status             : PARTIAL ⚠️")
+		}
+
+		fmt.Println("---------------------------------")
 	},
 }
 

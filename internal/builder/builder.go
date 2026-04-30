@@ -47,6 +47,7 @@ func Build(projectPath, valuesFile string) (string, error) {
 
 	var namespaceDocs []string
 	var otherDocs []string
+	var errors []string
 
 	for _, f := range files {
 		if f.IsDir() || f.Name() == "values.yaml" || filepath.Ext(f.Name()) != ".yaml" {
@@ -57,7 +58,10 @@ func Build(projectPath, valuesFile string) (string, error) {
 
 		rendered, err := renderer.RenderTemplate(fp, values)
 		if err != nil {
-			return "", fmt.Errorf("render %s: %v", f.Name(), err)
+			errors = append(errors,
+				fmt.Sprintf("[%s] %v", f.Name(), err),
+			)
+			continue
 		}
 
 		doc := "---\n" + rendered
@@ -81,6 +85,18 @@ func Build(projectPath, valuesFile string) (string, error) {
 	}
 	for _, d := range otherDocs {
 		final += d
+	}
+
+	if len(errors) > 0 {
+		fmt.Println("\n⚠️ Build Issues:")
+		fmt.Println("---------------------------------")
+
+		for _, e := range errors {
+			fmt.Printf("• %s\n", e)
+		}
+
+		fmt.Println("---------------------------------")
+		fmt.Printf("Total Errors: %d\n\n", len(errors))
 	}
 
 	return final, nil
