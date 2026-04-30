@@ -28,6 +28,8 @@ var applyCmd = &cobra.Command{
 		scanResult := scanner.ScanRenderedYAML(output)
 		summary := scanResult.Summary
 
+		fmt.Println("DEBUG APPLY OUTPUT:\n", output)
+
 		fmt.Println("\n🔍 Scan Summary")
 		fmt.Println("---------------------------------")
 		fmt.Printf("CRITICAL : %d\n", summary.Critical)
