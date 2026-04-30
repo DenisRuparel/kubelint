@@ -24,9 +24,19 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 
 	var fileName string
 
-	lines := strings.Split(yamlContent, "\n")
-	if len(lines) > 0 && strings.HasPrefix(lines[0], "# FILE:") {
-		fileName = strings.TrimSpace(strings.TrimPrefix(lines[0], "# FILE:"))
+	docs := strings.Split(yamlContent, "---")
+
+	for _, d := range docs {
+		d = strings.TrimSpace(d)
+		if d == "" {
+			continue
+		}
+
+		lines := strings.Split(d, "\n")
+		if len(lines) > 0 && strings.HasPrefix(lines[0], "# FILE:") {
+			fileName = strings.TrimSpace(strings.TrimPrefix(lines[0], "# FILE:"))
+			break
+		}
 	}
 
 	// 🔥 validate full YAML ONCE
@@ -48,14 +58,14 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 			if err == io.EOF {
 				break
 			}
+
 			msg := err.Error()
 			msg = strings.Replace(msg, "yaml:", "", 1)
 			msg = strings.TrimSpace(msg)
 
 			result.Issues = append(result.Issues, validators.ValidationResult{
 				Severity: validators.Critical,
-				Message: fmt.Sprintf(
-					"[%s] Invalid YAML syntax: %s (fix syntax before other validations)",
+				Message: fmt.Sprintf("[%s] Invalid YAML syntax: %s (fix syntax before other validations)",
 					fileName,
 					msg,
 				),
