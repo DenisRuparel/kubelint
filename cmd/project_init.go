@@ -35,7 +35,7 @@ var initCmd = &cobra.Command{
 
 		fmt.Println("Initializing KubeLint project...")
 
-    fmt.Println()
+		fmt.Println()
 
 		createProject(projectName)
 
@@ -56,16 +56,22 @@ func createProject(projectName string) {
 	createFile(filepath.Join(projectName, "templates/ingress.yaml"), ingressContent())
 	createFile(filepath.Join(projectName, "templates/namespace.yaml"), namespaceContent())
 
-	// environments/
+	// default values for build command
 	createFile(
-		filepath.Join(projectName, "environments/dev/values.yaml"),
-		devValuesContent(),
+		filepath.Join(projectName, "templates/values.yaml"),
+		prodValuesContent(), // default fallback (dev)
 	)
 
-	createFile(
-		filepath.Join(projectName, "environments/prod/values.yaml"),
-		prodValuesContent(),
-	)
+	// environments/
+	// createFile(
+	// 	filepath.Join(projectName, "environments/dev/values.yaml"),
+	// 	devValuesContent(),
+	// )
+
+	// createFile(
+	// 	filepath.Join(projectName, "environments/prod/values.yaml"),
+	// 	prodValuesContent(),
+	// )
 }
 
 func createFile(path string, content string) {
@@ -111,32 +117,43 @@ func deploymentContent() string {
 	return `apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .appName }}
-  namespace: {{ .namespace }}
+  name: {{ .global.appName }}
+  namespace: {{ .global.namespace }}
   labels:
-    app: {{ .appName }}
+    app: {{ .global.appName }}
 spec:
-  replicas: {{ .replicas }}
+  replicas: {{ .deployment.replicas }}
   selector:
     matchLabels:
-      app: {{ .appName }}
+      app: {{ .global.appName }}
   template:
     metadata:
       labels:
-        app: {{ .appName }}
+        app: {{ .global.appName }}
     spec:
+      restartPolicy: Always
+      
       containers:
-        - name: {{ .appName }}
-          image: {{ .image.repository }}:{{ .image.tag }}
+        - name: {{ .global.appName }}
+          image: {{ .deployment.image.repository }}:{{ .deployment.image.tag }}
           ports:
             - containerPort: {{ .service.targetPort }}
+
+          imagePullPolicy: Always
+
+          securityContext:
+            privileged: false
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+
           resources:
             requests:
-              cpu: "{{ .resources.requests.cpu }}"
-              memory: "{{ .resources.requests.memory }}"
+              cpu: "{{ .deployment.resources.requests.cpu }}"
+              memory: "{{ .deployment.resources.requests.memory }}"
             limits:
-              cpu: "{{ .resources.limits.cpu }}"
-              memory: "{{ .resources.limits.memory }}"
+              cpu: "{{ .deployment.resources.limits.cpu }}"
+              memory: "{{ .deployment.resources.limits.memory }}"
           livenessProbe:
             httpGet:
               path: /
@@ -157,10 +174,10 @@ func serviceContent() string {
 kind: Service
 metadata:
   name: {{ .service.name }}
-  namespace: {{ .namespace }}
+  namespace: {{ .global.namespace }}
 spec:
   selector:
-    app: {{ .appName }}
+    app: {{ .global.appName }}
   ports:
     - protocol: TCP
       port: {{ .service.port }}
@@ -174,9 +191,9 @@ func configMapContent() string {
 kind: ConfigMap
 metadata:
   name: {{ .configMap.name }}
-  namespace: {{ .namespace }}
+  namespace: {{ .global.namespace }}
 data:
-  APP_ENV: "{{ .environment }}"
+  APP_ENV: "{{ .global.environment }}"
   LOG_LEVEL: "{{ .configMap.logLevel }}"
 `
 }
@@ -186,7 +203,7 @@ func secretContent() string {
 kind: Secret
 metadata:
   name: {{ .secret.name }}
-  namespace: {{ .namespace }}
+  namespace: {{ .global.namespace }}
 type: Opaque
 stringData:
   DB_USERNAME: "{{ .secret.dbUsername }}"
@@ -199,7 +216,7 @@ func ingressContent() string {
 kind: Ingress
 metadata:
   name: {{ .ingress.name }}
-  namespace: {{ .namespace }}
+  namespace: {{ .global.namespace }}
 spec:
   rules:
     - host: {{ .ingress.host }}
@@ -209,9 +226,9 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ .service.name }}
+                name: {{ .global.service.name }}
                 port:
-                  number: {{ .service.port }}
+                  number: {{ .global.service.port }}
 `
 }
 
@@ -219,62 +236,63 @@ func namespaceContent() string {
 	return `apiVersion: v1
 kind: Namespace
 metadata:
-  name: {{ .namespace }}
+  name: {{ .global.namespace }}
   labels:
-    environment: {{ .environment }}
+    environment: {{ .global.environment }}
 `
 }
 
-func devValuesContent() string {
-	return `appName: sample-app
-namespace: dev
-environment: development
+// func devValuesContent() string {
+// 	return `appName: sample-app
+// namespace: dev
+// environment: development
 
-replicas: 1
+// replicas: 1
 
-image:
-  repository: nginx
-  tag: "latest"
+// image:
+//   repository: nginx
+//   tag: "latest"
 
-service:
-  name: sample-service
-  type: ClusterIP
-  port: 80
-  targetPort: 80
+// service:
+//   name: sample-service
+//   type: ClusterIP
+//   port: 80
+//   targetPort: 80
 
-resources:
-  requests:
-    cpu: "100m"
-    memory: "128Mi"
-  limits:
-    cpu: "250m"
-    memory: "256Mi"
+// resources:
+//   requests:
+//     cpu: "100m"
+//     memory: "128Mi"
+//   limits:
+//     cpu: "250m"
+//     memory: "256Mi"
 
-configMap:
-  name: sample-config
-  logLevel: debug
+// configMap:
+//   name: sample-config
+//   logLevel: debug
 
-secret:
-  name: sample-secret
-  dbUsername: devuser
-  dbPassword: devpassword
+// secret:
+//   name: sample-secret
+//   dbUsername: devuser
+//   dbPassword: devpassword
 
-ingress:
-  name: sample-ingress
-  host: dev.sample-app.local
-`
-}
+// ingress:
+//   name: sample-ingress
+//   host: dev.sample-app.local
+// `
+// }
 
 func prodValuesContent() string {
-	return `appName: sample-app
-namespace: production
-environment: production
+	return `global:
+  appName: sample-app
+  namespace: dev
+  environment: development
 
-replicas: 3
-
-image:
-  repository: nginx
-  tag: "1.25"
+deployment:
+  replicas: 1
+  image:
+    repository: nginx
+    tag: "latest"
 
 service:
   name: sample-service
