@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/DenisRuparel/kubelint/internal/loader"
 	"github.com/DenisRuparel/kubelint/internal/renderer"
@@ -17,17 +18,10 @@ func Build(projectPath, valuesFile string) (string, error) {
 		return "", fmt.Errorf("templates folder not found at: %s", templateDir)
 	}
 
-	// if valuesFile == "" {
-	// 	valuesFile = filepath.Join(templateDir, "values.yaml")
-	// }
-
-	// Only adjust path if user provided --values
-	// Resolve values file path correctly
+	// Resolve values file path
 	if valuesFile == "" {
-		// Default path → DO NOT modify further
 		valuesFile = filepath.Join(projectPath, "templates", "values.yaml")
 	} else {
-		// User provided path → resolve relative to project
 		if !filepath.IsAbs(valuesFile) {
 			valuesFile = filepath.Join(projectPath, valuesFile)
 		}
@@ -51,7 +45,8 @@ func Build(projectPath, valuesFile string) (string, error) {
 		return files[i].Name() < files[j].Name()
 	})
 
-	var final string
+	var namespaceDocs []string
+	var otherDocs []string
 
 	for _, f := range files {
 		if f.IsDir() || f.Name() == "values.yaml" || filepath.Ext(f.Name()) != ".yaml" {
@@ -65,11 +60,27 @@ func Build(projectPath, valuesFile string) (string, error) {
 			return "", fmt.Errorf("render %s: %v", f.Name(), err)
 		}
 
-		final += "---\n"
-		final += rendered
+		doc := "---\n" + rendered
 		if len(rendered) > 0 && rendered[len(rendered)-1] != '\n' {
-			final += "\n"
+			doc += "\n"
 		}
+
+		// Detect Namespace resource
+		if strings.Contains(rendered, "kind: Namespace") {
+			namespaceDocs = append(namespaceDocs, doc)
+		} else {
+			otherDocs = append(otherDocs, doc)
+		}
+	}
+
+	// Combine: Namespace FIRST
+	var final string
+
+	for _, d := range namespaceDocs {
+		final += d
+	}
+	for _, d := range otherDocs {
+		final += d
 	}
 
 	return final, nil
