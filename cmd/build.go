@@ -97,20 +97,6 @@ var buildCmd = &cobra.Command{
 			}
 		}
 
-		// 🔥 Final summary (FIXED)
-		fmt.Println("\n🚀 Build Summary")
-		fmt.Println("---------------------------------")
-		fmt.Printf("Templates rendered : %d\n", renderedCount)
-		fmt.Printf("Errors             : %d\n", len(errors))
-
-		if len(errors) == 0 {
-			fmt.Println("Status             : SUCCESS ✅")
-		} else {
-			fmt.Println("Status             : PARTIAL ⚠️")
-		}
-
-		fmt.Println("---------------------------------")
-
 		scanResult := scanner.ScanRenderedYAML(finalOutput)
 		summary := scanResult.Summary
 
@@ -131,11 +117,25 @@ var buildCmd = &cobra.Command{
 			}
 			fmt.Println("---------------------------------")
 			fmt.Println()
-			fmt.Printf("Total Errors: %d\n", len(errors))
+			fmt.Printf("Total Errors: %d\n", len(scanResult.Issues))
 			fmt.Println()
 			fmt.Println("❌ Build failed due to critical issues.")
 			os.Exit(1)
 		}
+
+		// 🔥 Final summary (FIXED)
+		fmt.Println("\n🚀 Build Summary")
+		fmt.Println("---------------------------------")
+		fmt.Printf("Templates rendered : %d\n", renderedCount)
+		fmt.Printf("Errors             : %d\n", len(scanResult.Issues))
+
+		if len(scanResult.Issues) == 0 {
+			fmt.Println("Status             : SUCCESS ✅")
+		} else {
+			fmt.Println("Status             : PARTIAL ⚠️")
+		}
+
+		fmt.Println("---------------------------------")
 	},
 }
 

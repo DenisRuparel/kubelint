@@ -53,7 +53,9 @@ var applyCmd = &cobra.Command{
 			}
 
 			fmt.Println("---------------------------------")
+			fmt.Println()
 			fmt.Println("❌ Deployment blocked due to critical issues.")
+			fmt.Println()
 			os.Exit(1)
 		}
 

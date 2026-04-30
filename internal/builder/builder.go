@@ -64,6 +64,8 @@ func Build(projectPath, valuesFile string) (string, error) {
 			continue
 		}
 
+		rendered = fmt.Sprintf("# FILE: %s\n%s", fp, rendered)
+
 		doc := "---\n" + rendered
 		if len(rendered) > 0 && rendered[len(rendered)-1] != '\n' {
 			doc += "\n"

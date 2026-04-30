@@ -51,6 +51,14 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 			continue
 		}
 
+		// 🔥 Extract file name from injected comment
+		var fileName string
+
+		lines := strings.Split(string(content), "\n")
+		if len(lines) > 0 && strings.HasPrefix(lines[0], "# FILE:") {
+			fileName = strings.TrimSpace(strings.TrimPrefix(lines[0], "# FILE:"))
+		}
+
 		var parsed map[string]interface{}
 		_ = yaml.Unmarshal(content, &parsed)
 
@@ -61,7 +69,19 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 		metadata, _ := parsed["metadata"].(map[string]interface{})
 		name, _ := metadata["name"].(string)
 
-		resourceID := fmt.Sprintf("%s/%s", kind, name)
+		var resourceID string
+
+		if fileName != "" {
+			resourceID = fileName
+		} else {
+			if kind == "" {
+				kind = "Unknown"
+			}
+			if name == "" {
+				name = "unknown"
+			}
+			resourceID = fmt.Sprintf("%s/%s", kind, name)
+		}
 
 		// YAML syntax
 		syntax := validators.ValidateYAMLSyntaxBytes(content)
