@@ -26,11 +26,11 @@ var applyCmd = &cobra.Command{
 		summary := scanner.ScanRenderedYAML(output)
 
 		fmt.Println("\n🔍 Scan Summary")
-		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Println("---------------------------------")
 		fmt.Printf("CRITICAL : %d\n", summary.Critical)
 		fmt.Printf("WARNING  : %d\n", summary.Warning)
 		fmt.Printf("INFO     : %d\n", summary.Info)
-		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Println("---------------------------------")
 
 		if summary.Critical > 0 {
 			fmt.Println("\n❌ Critical issues found. Deployment blocked.")
