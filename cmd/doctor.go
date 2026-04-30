@@ -21,8 +21,8 @@ var doctorCmd = &cobra.Command{
 
 		section("📦 Environment")
 		checkCommand("kubectl", "kubectl")
-		checkCommand("docker", "Docker")
-		checkCommand("cue", "CUE (required for Phase 3)")
+		checkContainerRuntime()
+		checkOptionalCommand("cue", "CUE (recommended for Phase 3)")
 
 		fmt.Println()
 
@@ -82,6 +82,32 @@ func checkCommand(command string, name string) {
 	success(fmt.Sprintf("%s is installed", name))
 }
 
+func checkContainerRuntime() {
+	_, dockerErr := exec.LookPath("docker")
+	_, ctrErr := exec.LookPath("containerd")
+
+	if dockerErr == nil {
+		success("Docker is installed")
+		return
+	}
+
+	if ctrErr == nil {
+		success("containerd is installed")
+		return
+	}
+
+	fail("No container runtime found (Docker or containerd required)")
+}
+
+func checkOptionalCommand(command string, name string) {
+	_, err := exec.LookPath(command)
+	if err != nil {
+		warn(fmt.Sprintf("%s is not installed", name))
+		return
+	}
+	success(fmt.Sprintf("%s is installed", name))
+}
+
 //////////////////////////////////////////////////////
 // KUBERNETES CHECKS
 //////////////////////////////////////////////////////
@@ -121,7 +147,7 @@ func checkContext() {
 }
 
 func checkKubectlVersion() {
-	out, err := exec.Command("kubectl", "version", "--client", "--short").Output()
+	out, err := exec.Command("kubectl", "version", "--client").Output()
 	if err != nil {
 		warn("Could not determine kubectl version")
 		return
@@ -143,7 +169,8 @@ func checkProjectStructure() {
 
 	if _, err := os.Stat(templatesPath); os.IsNotExist(err) {
 		fail("templates/ folder not found (not a KubeLint project)")
-		fmt.Println("   💡 Run: kubelint init")
+		fmt	.Println()
+		fmt.Println("💡 Run: kubelint init")
 		return
 	}
 
