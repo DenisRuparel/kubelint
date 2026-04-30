@@ -33,7 +33,7 @@ var buildCmd = &cobra.Command{
 			localValuesFile = filepath.Join(templateDir, "values.yaml")
 		}
 
-		fmt.Println("Starting KubeLint build...")
+		// fmt.Println("Starting KubeLint build...")
 
 		// Path checks
 		if _, err := os.Stat(templateDir); os.IsNotExist(err) {
