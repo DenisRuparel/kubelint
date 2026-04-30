@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/DenisRuparel/kubelint/internal/builder"
+	"github.com/DenisRuparel/kubelint/internal/scanner"
+	"github.com/spf13/cobra"
 	"os/exec"
 	"strings"
-	"github.com/DenisRuparel/kubelint/internal/builder"
-	"github.com/spf13/cobra"
 )
 
 var applyValues string
@@ -21,6 +22,21 @@ var applyCmd = &cobra.Command{
 		fmt.Println("Applying KubeLint manifests...")
 
 		output, err := builder.Build(projectPath, applyValues)
+
+		summary := scanner.ScanRenderedYAML(output)
+
+		fmt.Println("\n🔍 Scan Summary")
+		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Printf("CRITICAL : %d\n", summary.Critical)
+		fmt.Printf("WARNING  : %d\n", summary.Warning)
+		fmt.Printf("INFO     : %d\n", summary.Info)
+		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+		if summary.Critical > 0 {
+			fmt.Println("\n❌ Critical issues found. Deployment blocked.")
+			return
+		}
+
 		if err != nil {
 			fmt.Println("❌", err)
 			return
