@@ -22,6 +22,15 @@ type ScanResult struct {
 func ScanRenderedYAML(yamlContent string) ScanResult {
 	var result ScanResult
 
+	// 🔥 validate full YAML ONCE
+	syntax := validators.ValidateYAMLSyntaxBytes([]byte(yamlContent))
+
+	if syntax.Severity == validators.Critical {
+		result.Issues = append(result.Issues, syntax)
+		result.Summary.Critical++
+		return result
+	}
+
 	decoder := yaml.NewDecoder(strings.NewReader(yamlContent))
 
 	for {
@@ -32,7 +41,13 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 			if err == io.EOF {
 				break
 			}
-			continue // skip bad doc, keep going
+			result.Issues = append(result.Issues, validators.ValidationResult{
+				Severity: validators.Critical,
+				Message:  fmt.Sprintf("Invalid YAML syntax: %v", err),
+			})
+
+			result.Summary.Critical++
+			return result
 		}
 
 		if len(node.Content) == 0 {
@@ -84,10 +99,10 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 		}
 
 		// YAML syntax
-		syntax := validators.ValidateYAMLSyntaxBytes(content)
-		results = append(results, syntax)
+		docSyntax := validators.ValidateYAMLSyntaxBytes(content)
+		results = append(results, docSyntax)
 
-		if syntax.Severity != validators.Critical {
+		if docSyntax.Severity != validators.Critical {
 			results = append(results, validators.ValidateCommonBytes(content)...)
 			results = append(results, validators.ValidateStructureBytes(content))
 			results = append(results, validators.ValidateDeploymentBytes(content)...)
