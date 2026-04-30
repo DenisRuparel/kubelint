@@ -158,14 +158,16 @@ spec:
             httpGet:
               path: /
               port: {{ .service.targetPort }}
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /
               port: {{ .service.targetPort }}
-            initialDelaySeconds: 5
-            periodSeconds: 5
+            initialDelaySeconds: 10
+            timeoutSeconds: 5
+            periodSeconds: 10
 `
 }
 
