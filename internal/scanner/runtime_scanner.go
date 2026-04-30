@@ -4,6 +4,7 @@ import (
 	"fmt"
 	validators "github.com/DenisRuparel/kubelint/internal/validator"
 	"gopkg.in/yaml.v3"
+	"io"
 	"strings"
 )
 
@@ -28,7 +29,10 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 
 		err := decoder.Decode(&node)
 		if err != nil {
-			break
+			if err == io.EOF {
+				break
+			}
+			continue // skip bad doc, keep going
 		}
 
 		if len(node.Content) == 0 {
