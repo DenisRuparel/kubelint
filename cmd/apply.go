@@ -57,11 +57,6 @@ var applyCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err != nil {
-			fmt.Println("❌", err)
-			os.Exit(1)
-		}
-
 		// kubectl apply -f -
 		kubectl := exec.Command("kubectl", "apply", "-f", "-")
 		kubectl.Stdin = strings.NewReader(output)

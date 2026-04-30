@@ -21,6 +21,9 @@ var buildCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
+
+		finalOutput = ""
+
 		projectPath := args[0]
 		templateDir := filepath.Join(projectPath, "templates")
 
@@ -84,6 +87,13 @@ var buildCmd = &cobra.Command{
 
 			if len(rendered) > 0 && rendered[len(rendered)-1] != '\n' {
 				fmt.Println()
+			}
+
+			finalOutput += "---\n"
+			finalOutput += rendered
+
+			if len(rendered) > 0 && rendered[len(rendered)-1] != '\n' {
+				finalOutput += "\n"
 			}
 		}
 
