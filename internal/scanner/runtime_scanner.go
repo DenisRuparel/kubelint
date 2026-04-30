@@ -43,7 +43,7 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 			}
 			result.Issues = append(result.Issues, validators.ValidationResult{
 				Severity: validators.Critical,
-				Message:  fmt.Sprintf("[unknown-file] Invalid YAML syntax: %v (fix syntax before other validations)", err),
+				Message:  fmt.Sprintf("[%s] Invalid YAML syntax: %v (fix syntax before other validations)", err),
 			})
 
 			result.Summary.Critical++
