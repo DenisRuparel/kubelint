@@ -11,9 +11,18 @@ import (
 )
 
 var doctorCmd = &cobra.Command{
-	Use:   "doctor",
-	Short: "Check system readiness for KubeLint",
+	Use:   "doctor [project-path]",
+	Short: "Check system and project readiness for KubeLint (defaults to current directory)",
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+
+		var projectPath string
+
+		if len(args) == 0 {
+			projectPath, _ = os.Getwd()
+		} else {
+			projectPath = args[0]
+		}
 
 		fmt.Println("\n🔍 KubeLint Doctor Report")
 		fmt.Println("-----------------------------------------")
@@ -36,7 +45,7 @@ var doctorCmd = &cobra.Command{
 
 		section("📁 Project")
 
-		checkProjectStructure()
+		checkProjectStructure(projectPath)
 
 		fmt.Println("------------------------------------------")
 		fmt.Println("✅ Doctor check completed")
@@ -147,30 +156,40 @@ func checkContext() {
 }
 
 func checkKubectlVersion() {
-	out, err := exec.Command("kubectl", "version", "--client", "|", "grep", "-i", "Client Version").Output()
-	if err != nil {
-		warn("Could not determine kubectl version")
+	out, _ := exec.Command("kubectl", "version", "--client").CombinedOutput()
+
+	if len(out) == 0 {
+		fail("kubectl installed but no version output")
 		return
 	}
 
-	version := strings.TrimSpace(string(out))
-	success(fmt.Sprintf("kubectl version: %s", version))
+	lines := strings.Split(string(out), "\n")
+
+	for _, line := range lines {
+		l := strings.ToLower(line)
+
+		if strings.Contains(l, "client version") || strings.Contains(l, "clientversion") {
+			success(strings.TrimSpace(line))
+			return
+		}
+	}
+
+	// fallback: print raw output (important)
+	warn("Could not parse kubectl version, raw output:")
+	fmt.Println(string(out))
 }
 
 //////////////////////////////////////////////////////
 // PROJECT CHECKS
 //////////////////////////////////////////////////////
 
-func checkProjectStructure() {
-	cwd, _ := os.Getwd()
+func checkProjectStructure(projectPath string) {
 
-	templatesPath := filepath.Join(cwd, "templates")
-	valuesPath := filepath.Join(cwd, "templates", "values.yaml")
+	templatesPath := filepath.Join(projectPath, "templates")
+	valuesPath := filepath.Join(projectPath, "templates", "values.yaml")
 
 	if _, err := os.Stat(templatesPath); os.IsNotExist(err) {
 		fail("templates/ folder not found (not a KubeLint project)")
-		fmt	.Println()
-		fmt.Println("💡 Run: kubelint init")
 		return
 	}
 
