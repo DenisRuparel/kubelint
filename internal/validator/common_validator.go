@@ -1,10 +1,8 @@
 package validators
 
 import (
-	"fmt"
 	"gopkg.in/yaml.v3"
 	"os"
-	"strings"
 )
 
 // ValidateCommon checks for common fields in Kubernetes manifests
@@ -103,142 +101,75 @@ func ValidateCommon(filePath string) []ValidationResult {
 }
 
 // ValidateCommonBytes is a helper for validating YAML content directly
-
 func ValidateCommonBytes(content []byte) []ValidationResult {
 	var results []ValidationResult
 
-	var parsed map[string]interface{}
-
-	raw := string(content)
-
-	if strings.Contains(raw, "apiVersion:") && !strings.Contains(raw, "apiVersion: ") {
-		results = append(results, ValidationResult{
-			Severity: Critical,
-			Message:  "apiVersion is empty",
-		})
+	var node yaml.Node
+	err := yaml.Unmarshal(content, &node)
+	if err != nil {
+		return []ValidationResult{
+			{
+				Severity: Critical,
+				Message:  "Invalid YAML structure",
+			},
+		}
 	}
 
-	if strings.Contains(raw, "kind:") && !strings.Contains(raw, "kind: ") {
-		results = append(results, ValidationResult{
-			Severity: Critical,
-			Message:  "kind is empty",
-		})
+	if len(node.Content) == 0 {
+		return results
 	}
 
-	if strings.Contains(raw, "metadata:") && !strings.Contains(raw, "metadata: ") {
-		results = append(results, ValidationResult{
-			Severity: Critical,
-			Message:  "metadata is empty",
-		})
+	doc := node.Content[0]
+
+	var apiVersion, kind, name string
+	var hasMetadata bool
+
+	for i := 0; i < len(doc.Content); i += 2 {
+		key := doc.Content[i].Value
+		value := doc.Content[i+1]
+
+		switch key {
+		case "apiVersion":
+			apiVersion = value.Value
+		case "kind":
+			kind = value.Value
+		case "metadata":
+			hasMetadata = true
+
+			for j := 0; j < len(value.Content); j += 2 {
+				if value.Content[j].Value == "name" {
+					name = value.Content[j+1].Value
+				}
+			}
+		}
 	}
 
-	if strings.Contains(raw, "metadata.name:") && !strings.Contains(raw, "metadata.name: ") {
-		results = append(results, ValidationResult{
-			Severity: Critical,
-			Message:  "metadata.name is empty",
-		})
-	}
-
-
-	
-
-	// CRITICAL → apiVersion
-	apiVersion, exists := parsed["apiVersion"]
-
-	if !exists || apiVersion == nil {
+	// ✅ Correct checks
+	if apiVersion == "" {
 		results = append(results, ValidationResult{
 			Severity: Critical,
 			Message:  "apiVersion is missing or empty",
 		})
-	} else {
-		str := fmt.Sprintf("%v", apiVersion)
-		if str == "" || str == "<nil>" {
-			results = append(results, ValidationResult{
-				Severity: Critical,
-				Message:  "apiVersion is missing or empty",
-			})
-		}
 	}
 
-	// CRITICAL → kind
-	kind, exists := parsed["kind"]
-
-	if !exists || kind == nil {
+	if kind == "" {
 		results = append(results, ValidationResult{
 			Severity: Critical,
 			Message:  "kind is missing or empty",
 		})
-	} else {
-		str := fmt.Sprintf("%v", kind)
-		if str == "" || str == "<nil>" {
-			results = append(results, ValidationResult{
-				Severity: Critical,
-				Message:  "kind is missing or empty",
-			})
-		}
 	}
 
-	// CRITICAL → metadata
-	metaRaw, exists := parsed["metadata"]
-
-	if !exists || metaRaw == nil {
+	if !hasMetadata {
 		results = append(results, ValidationResult{
 			Severity: Critical,
 			Message:  "metadata section is missing",
 		})
-	} else {
-		str := fmt.Sprintf("%v", metaRaw)
-		if str == "" || str == "<nil>" {
-			results = append(results, ValidationResult{
-				Severity: Critical,
-				Message:  "metadata section is missing",
-			})
-		}
 	}
 
-	metadata, ok := metaRaw.(map[string]interface{})
-	if !ok {
-		return results
-	}
-
-	// CRITICAL → metadata.name
-	name, exists := metadata["name"]
-	if !exists || name == nil {
+	if name == "" {
 		results = append(results, ValidationResult{
 			Severity: Critical,
 			Message:  "metadata.name is missing or empty",
-		})
-	} else {
-		str := fmt.Sprintf("%v", name)
-		if str == "" || str == "<nil>" {
-			results = append(results, ValidationResult{
-				Severity: Critical,
-				Message:  "metadata.name is missing or empty",
-			})
-		}
-	}
-
-	// WARNING → namespace
-	if _, exists := metadata["namespace"]; !exists {
-		results = append(results, ValidationResult{
-			Severity: Warning,
-			Message:  "metadata.namespace is missing",
-		})
-	}
-
-	// WARNING → labels
-	if _, exists := metadata["labels"]; !exists {
-		results = append(results, ValidationResult{
-			Severity: Warning,
-			Message:  "metadata.labels are missing",
-		})
-	}
-
-	// INFO → annotations
-	if _, exists := metadata["annotations"]; !exists {
-		results = append(results, ValidationResult{
-			Severity: Info,
-			Message:  "metadata.annotations not set (recommended)",
 		})
 	}
 

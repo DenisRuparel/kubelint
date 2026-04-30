@@ -68,6 +68,7 @@ var applyCmd = &cobra.Command{
 
 		out, err := kubectl.CombinedOutput()
 		if err != nil {
+			fmt.Println()
 			fmt.Println("❌ kubectl apply failed:")
 			fmt.Println("---------------------------------")
 			fmt.Println(string(out))
