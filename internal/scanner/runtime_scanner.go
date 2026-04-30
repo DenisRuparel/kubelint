@@ -4,7 +4,7 @@ import (
 	"strings"
 	"fmt"
 	"gopkg.in/yaml.v3"
-	"github.com/DenisRuparel/kubelint/internal/validator"
+	validators "github.com/DenisRuparel/kubelint/internal/validator"
 )
 
 type ScanSummary struct {
