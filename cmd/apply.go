@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"os/exec"
 	"strings"
+	"os"
 )
 
 var applyValues string
@@ -46,12 +47,12 @@ var applyCmd = &cobra.Command{
 
 			fmt.Println("---------------------------------")
 			fmt.Println("❌ Deployment blocked due to critical issues.")
-			return
+			os.Exit(1)
 		}
 
 		if err != nil {
 			fmt.Println("❌", err)
-			return
+			os.Exit(1)
 		}
 
 		// kubectl apply -f -
@@ -62,7 +63,7 @@ var applyCmd = &cobra.Command{
 		if err != nil {
 			fmt.Println("❌ kubectl apply failed:")
 			fmt.Println(string(out))
-			return
+			os.Exit(1)
 		}
 
 		fmt.Println("✔ Applied successfully")
