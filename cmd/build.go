@@ -4,12 +4,16 @@ import (
 	"fmt"
 	"github.com/DenisRuparel/kubelint/internal/loader"
 	"github.com/DenisRuparel/kubelint/internal/renderer"
+	"github.com/DenisRuparel/kubelint/internal/scanner"
+	"github.com/DenisRuparel/kubelint/internal/validator"
 	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
 )
 
 var valuesFile string
+
+var finalOutput string
 
 var buildCmd = &cobra.Command{
 	Use:   "build [project-path]",
@@ -83,17 +87,6 @@ var buildCmd = &cobra.Command{
 			}
 		}
 
-		// 🔥 Print build issues (NEW)
-		if len(errors) > 0 {
-			fmt.Println("\n⚠️ Build Issues:")
-			fmt.Println("---------------------------------")
-			for _, e := range errors {
-				fmt.Printf("• %s\n", e)
-			}
-			fmt.Println("---------------------------------")
-			fmt.Printf("Total Errors: %d\n", len(errors))
-		}
-
 		// 🔥 Final summary (FIXED)
 		fmt.Println("\n🚀 Build Summary")
 		fmt.Println("---------------------------------")
@@ -107,6 +100,32 @@ var buildCmd = &cobra.Command{
 		}
 
 		fmt.Println("---------------------------------")
+
+		scanResult := scanner.ScanRenderedYAML(finalOutput)
+		summary := scanResult.Summary
+
+		fmt.Println("\n🔍 Build Validation")
+		fmt.Println("---------------------------------")
+		fmt.Printf("CRITICAL : %d\n", summary.Critical)
+		fmt.Printf("WARNING  : %d\n", summary.Warning)
+		fmt.Printf("INFO     : %d\n", summary.Info)
+		fmt.Println("---------------------------------")
+
+		if summary.Critical > 0 {
+			fmt.Println("\n⚠️ Build Issues detected:")
+			fmt.Println("---------------------------------")
+			for _, issue := range scanResult.Issues {
+				if issue.Severity == validators.Critical {
+					fmt.Printf("• %s\n", issue.Message)
+				}
+			}
+			fmt.Println("---------------------------------")
+			fmt.Println()
+			fmt.Printf("Total Errors: %d\n", len(errors))
+			fmt.Println()
+			fmt.Println("❌ Build failed due to critical issues.")
+			os.Exit(1)
+		}
 	},
 }
 
