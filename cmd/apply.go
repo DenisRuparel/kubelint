@@ -5,6 +5,7 @@ import (
 	"github.com/DenisRuparel/kubelint/internal/builder"
 	"github.com/DenisRuparel/kubelint/internal/scanner"
 	"github.com/DenisRuparel/kubelint/internal/validator"
+	"github.com/DenisRuparel/kubelint/internal/utils"
 	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
@@ -35,7 +36,7 @@ var applyCmd = &cobra.Command{
 
 		// fmt.Println("DEBUG APPLY OUTPUT:\n", output)
 
-		fmt.Println("\n🔍 Scan Summary")
+		fmt.Println("\n🔍 Apply Summary")
 		fmt.Println("---------------------------------")
 		fmt.Printf("CRITICAL : %d\n", summary.Critical)
 		fmt.Printf("WARNING  : %d\n", summary.Warning)
@@ -61,7 +62,8 @@ var applyCmd = &cobra.Command{
 
 		// kubectl apply -f -
 		kubectl := exec.Command("kubectl", "apply", "-f", "-")
-		kubectl.Stdin = strings.NewReader(output)
+		clean := utils.CleanYAML(output)
+		kubectl.Stdin = strings.NewReader(clean)
 
 		out, err := kubectl.CombinedOutput()
 		if err != nil {

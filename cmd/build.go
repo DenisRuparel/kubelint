@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/DenisRuparel/kubelint/internal/utils"
 	"github.com/DenisRuparel/kubelint/internal/loader"
 	"github.com/DenisRuparel/kubelint/internal/renderer"
 	"github.com/DenisRuparel/kubelint/internal/scanner"
@@ -129,7 +130,8 @@ var buildCmd = &cobra.Command{
 		// ✅ SUCCESS CASE → NOW PRINT YAML
 		fmt.Println("\nRendering templates...")
 		fmt.Println()
-		fmt.Print(finalOutput)
+		clean := utils.CleanYAML(finalOutput)
+		fmt.Print(clean)
 
 		fmt.Println("\n🚀 Build Summary")
 		fmt.Println("---------------------------------")
