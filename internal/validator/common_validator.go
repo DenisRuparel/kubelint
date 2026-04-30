@@ -1,9 +1,9 @@
 package validators
 
 import (
-	"os"
 	"fmt"
 	"gopkg.in/yaml.v3"
+	"os"
 )
 
 // ValidateCommon checks for common fields in Kubernetes manifests
@@ -110,30 +110,56 @@ func ValidateCommonBytes(content []byte) []ValidationResult {
 
 	// CRITICAL → apiVersion
 	apiVersion, exists := parsed["apiVersion"]
-	if !exists || apiVersion == nil || fmt.Sprintf("%v", apiVersion) == "" {
+
+	if !exists || apiVersion == nil {
 		results = append(results, ValidationResult{
 			Severity: Critical,
 			Message:  "apiVersion is missing or empty",
 		})
+	} else {
+		str := fmt.Sprintf("%v", apiVersion)
+		if str == "" || str == "<nil>" {
+			results = append(results, ValidationResult{
+				Severity: Critical,
+				Message:  "apiVersion is missing or empty",
+			})
+		}
 	}
 
 	// CRITICAL → kind
 	kind, exists := parsed["kind"]
-	if !exists || kind == nil || fmt.Sprintf("%v", kind) == "" {
+
+	if !exists || kind == nil {
 		results = append(results, ValidationResult{
 			Severity: Critical,
 			Message:  "kind is missing or empty",
 		})
+	} else {
+		str := fmt.Sprintf("%v", kind)
+		if str == "" || str == "<nil>" {
+			results = append(results, ValidationResult{
+				Severity: Critical,
+				Message:  "kind is missing or empty",
+			})
+		}
 	}
 
 	// CRITICAL → metadata
 	metaRaw, exists := parsed["metadata"]
-	if !exists || metaRaw == nil || fmt.Sprintf("%v", metaRaw) == "" {
+
+	if !exists || metaRaw == nil {
 		results = append(results, ValidationResult{
 			Severity: Critical,
 			Message:  "metadata section is missing",
 		})
-		return results
+	} else{
+		str := fmt.Sprintf("%v", metaRaw)
+		if str == "" || str == "<nil>" {
+			results = append(results, ValidationResult{
+				Severity: Critical,
+				Message:  "metadata section is missing",
+			})
+		}
 	}
 
 	metadata, ok := metaRaw.(map[string]interface{})
@@ -143,11 +169,19 @@ func ValidateCommonBytes(content []byte) []ValidationResult {
 
 	// CRITICAL → metadata.name
 	name, exists := metadata["name"]
-	if !exists || name == nil || fmt.Sprintf("%v", name) == "" {
+	if !exists || name == nil {
 		results = append(results, ValidationResult{
 			Severity: Critical,
 			Message:  "metadata.name is missing or empty",
 		})
+	}else {
+		str := fmt.Sprintf("%v", name)
+		if str == "" || str == "<nil>" {
+			results = append(results, ValidationResult{
+				Severity: Critical,
+				Message:  "metadata.name is missing or empty",
+			})
+		}
 	}
 
 	// WARNING → namespace
