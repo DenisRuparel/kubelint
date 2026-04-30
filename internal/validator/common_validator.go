@@ -2,7 +2,7 @@ package validators
 
 import (
 	"os"
-
+	"fmt"
 	"gopkg.in/yaml.v3"
 )
 
@@ -29,28 +29,26 @@ func ValidateCommon(filePath string) []ValidationResult {
 	}
 
 	// CRITICAL → apiVersion
-	apiVersion, exists := parsed["apiVersion"]
-	if !exists || apiVersion == nil || apiVersion == "" {
+	if _, exists := parsed["apiVersion"]; !exists {
 		results = append(results, ValidationResult{
 			File:     filePath,
 			Severity: Critical,
-			Message:  "apiVersion is missing or empty",
+			Message:  "apiVersion is missing",
 		})
 	}
 
 	// CRITICAL → kind
-	kind, exists := parsed["kind"]
-	if !exists || kind == nil || kind == "" {
+	if _, exists := parsed["kind"]; !exists {
 		results = append(results, ValidationResult{
 			File:     filePath,
 			Severity: Critical,
-			Message:  "kind is missing or empty",
+			Message:  "kind is missing",
 		})
 	}
 
 	// CRITICAL → metadata
 	metaRaw, exists := parsed["metadata"]
-	if !exists || metaRaw == nil || metaRaw == "" {
+	if !exists {
 		results = append(results, ValidationResult{
 			File:     filePath,
 			Severity: Critical,
@@ -65,28 +63,25 @@ func ValidateCommon(filePath string) []ValidationResult {
 	}
 
 	// CRITICAL → metadata.name
-	name, exists := metadata["name"]
-	if !exists || name == nil || name == "" {
+	if _, exists := metadata["name"]; !exists {
 		results = append(results, ValidationResult{
 			File:     filePath,
 			Severity: Critical,
-			Message:  "metadata.name is missing or empty",
+			Message:  "metadata.name is missing",
 		})
 	}
 
 	// WARNING → namespace
-	namespace, exists := metadata["namespace"]
-	if !exists || namespace == nil || namespace == "" {
+	if _, exists := metadata["namespace"]; !exists {
 		results = append(results, ValidationResult{
 			File:     filePath,
 			Severity: Warning,
-			Message:  "metadata.namespace is missing or empty",
+			Message:  "metadata.namespace is missing",
 		})
 	}
 
 	// WARNING → labels
-	labels, exists := metadata["labels"]
-	if !exists || labels == nil {
+	if _, exists := metadata["labels"]; !exists {
 		results = append(results, ValidationResult{
 			File:     filePath,
 			Severity: Warning,
@@ -95,8 +90,7 @@ func ValidateCommon(filePath string) []ValidationResult {
 	}
 
 	// INFO → annotations
-	annotations, exists := metadata["annotations"]
-	if !exists || annotations == nil {
+	if _, exists := metadata["annotations"]; !exists {
 		results = append(results, ValidationResult{
 			File:     filePath,
 			Severity: Info,
@@ -114,18 +108,9 @@ func ValidateCommonBytes(content []byte) []ValidationResult {
 
 	var parsed map[string]interface{}
 
-	err := yaml.Unmarshal(content, &parsed)
-	if err != nil {
-		results = append(results, ValidationResult{
-			Severity: Critical,
-			Message:  "Failed to unmarshal YAML",
-		})
-		return results
-	}
-
 	// CRITICAL → apiVersion
 	apiVersion, exists := parsed["apiVersion"]
-	if !exists || apiVersion == nil || apiVersion == "" {
+	if !exists || apiVersion == nil || fmt.Sprintf("%v", apiVersion) == "" {
 		results = append(results, ValidationResult{
 			Severity: Critical,
 			Message:  "apiVersion is missing or empty",
@@ -134,7 +119,7 @@ func ValidateCommonBytes(content []byte) []ValidationResult {
 
 	// CRITICAL → kind
 	kind, exists := parsed["kind"]
-	if !exists || kind == nil || kind == "" {
+	if !exists || kind == nil || fmt.Sprintf("%v", kind) == "" {
 		results = append(results, ValidationResult{
 			Severity: Critical,
 			Message:  "kind is missing or empty",
@@ -143,7 +128,7 @@ func ValidateCommonBytes(content []byte) []ValidationResult {
 
 	// CRITICAL → metadata
 	metaRaw, exists := parsed["metadata"]
-	if !exists || metaRaw == nil || metaRaw == "" {
+	if !exists || metaRaw == nil || fmt.Sprintf("%v", metaRaw) == "" {
 		results = append(results, ValidationResult{
 			Severity: Critical,
 			Message:  "metadata section is missing",
@@ -158,7 +143,7 @@ func ValidateCommonBytes(content []byte) []ValidationResult {
 
 	// CRITICAL → metadata.name
 	name, exists := metadata["name"]
-	if !exists || name == nil || name == "" {
+	if !exists || name == nil || fmt.Sprintf("%v", name) == "" {
 		results = append(results, ValidationResult{
 			Severity: Critical,
 			Message:  "metadata.name is missing or empty",
@@ -166,17 +151,15 @@ func ValidateCommonBytes(content []byte) []ValidationResult {
 	}
 
 	// WARNING → namespace
-	namespace, exists := metadata["namespace"]
-	if !exists || namespace == nil || namespace == "" {
+	if _, exists := metadata["namespace"]; !exists {
 		results = append(results, ValidationResult{
 			Severity: Warning,
-			Message:  "metadata.namespace is missing or empty",
+			Message:  "metadata.namespace is missing",
 		})
 	}
 
 	// WARNING → labels
-	labels, exists := metadata["labels"]
-	if !exists || labels == nil {
+	if _, exists := metadata["labels"]; !exists {
 		results = append(results, ValidationResult{
 			Severity: Warning,
 			Message:  "metadata.labels are missing",
@@ -184,8 +167,7 @@ func ValidateCommonBytes(content []byte) []ValidationResult {
 	}
 
 	// INFO → annotations
-	annotations, exists := metadata["annotations"]
-	if !exists || annotations == nil {
+	if _, exists := metadata["annotations"]; !exists {
 		results = append(results, ValidationResult{
 			Severity: Info,
 			Message:  "metadata.annotations not set (recommended)",
