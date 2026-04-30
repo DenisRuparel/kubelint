@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/DenisRuparel/kubelint/internal/builder"
 	"github.com/DenisRuparel/kubelint/internal/scanner"
+	"github.com/DenisRuparel/kubelint/internal/validator"
 	"github.com/spf13/cobra"
 	"os/exec"
 	"strings"
@@ -23,7 +24,8 @@ var applyCmd = &cobra.Command{
 
 		output, err := builder.Build(projectPath, applyValues)
 
-		summary := scanner.ScanRenderedYAML(output)
+		scanResult := scanner.ScanRenderedYAML(output)
+		summary := scanResult.Summary
 
 		fmt.Println("\n🔍 Scan Summary")
 		fmt.Println("---------------------------------")
@@ -33,7 +35,17 @@ var applyCmd = &cobra.Command{
 		fmt.Println("---------------------------------")
 
 		if summary.Critical > 0 {
-			fmt.Println("\n❌ Critical issues found. Deployment blocked.")
+			fmt.Println("\n❌ Critical Issues:")
+			fmt.Println("---------------------------------")
+
+			for _, issue := range scanResult.Issues {
+				if issue.Severity == validators.Critical {
+					fmt.Printf("• %s\n", issue.Message)
+				}
+			}
+
+			fmt.Println("---------------------------------")
+			fmt.Println("❌ Deployment blocked due to critical issues.")
 			return
 		}
 

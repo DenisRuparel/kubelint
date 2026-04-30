@@ -12,8 +12,13 @@ type ScanSummary struct {
 	Info     int
 }
 
-func ScanRenderedYAML(yamlContent string) ScanSummary {
-	var summary ScanSummary
+type ScanResult struct {
+	Summary ScanSummary
+	Issues  []validators.ValidationResult
+}
+
+func ScanRenderedYAML(yamlContent string) ScanResult {
+	var result ScanResult
 
 	// Split multi-doc YAML
 	docs := strings.Split(yamlContent, "---")
@@ -67,14 +72,14 @@ func ScanRenderedYAML(yamlContent string) ScanSummary {
 		for _, r := range results {
 			switch r.Severity {
 			case validators.Critical:
-				summary.Critical++
+				result.Summary.Critical++
 			case validators.Warning:
-				summary.Warning++
+				result.Summary.Warning++
 			case validators.Info:
-				summary.Info++
+				result.Summary.Info++
 			}
 		}
 	}
 
-	return summary
+	return result
 }
