@@ -40,7 +40,11 @@ func ScanRenderedYAML(yamlContent string) ScanResult {
 		}
 
 		// 👇 THIS IS THE FIX — preserve original YAML
-		content, err := yaml.Marshal(node.Content[0])
+		if node.Kind != yaml.DocumentNode || len(node.Content) == 0 {
+			continue
+		}
+
+		content, err := yaml.Marshal(node)
 		if err != nil {
 			continue
 		}

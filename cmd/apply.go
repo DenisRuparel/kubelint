@@ -6,9 +6,9 @@ import (
 	"github.com/DenisRuparel/kubelint/internal/scanner"
 	"github.com/DenisRuparel/kubelint/internal/validator"
 	"github.com/spf13/cobra"
+	"os"
 	"os/exec"
 	"strings"
-	"os"
 )
 
 var applyValues string
@@ -24,6 +24,11 @@ var applyCmd = &cobra.Command{
 		fmt.Println("Applying KubeLint manifests...")
 
 		output, err := builder.Build(projectPath, applyValues)
+
+		if err != nil {
+			fmt.Println("❌", err)
+			os.Exit(1)
+		}
 
 		scanResult := scanner.ScanRenderedYAML(output)
 		summary := scanResult.Summary
