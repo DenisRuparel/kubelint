@@ -17,14 +17,15 @@ func Build(projectPath, valuesFile string) (string, error) {
 		return "", fmt.Errorf("templates folder not found at: %s", templateDir)
 	}
 
-	if valuesFile == "" {
-		valuesFile = filepath.Join(templateDir, "values.yaml")
-	}
+	// if valuesFile == "" {
+	// 	valuesFile = filepath.Join(templateDir, "values.yaml")
+	// }
 
 	// Only adjust path if user provided --values
+	// Resolve values file path correctly
 	if valuesFile == "" {
-		// Default path (DO NOT modify again)
-		valuesFile = filepath.Join(templateDir, "values.yaml")
+		// Default path → DO NOT modify further
+		valuesFile = filepath.Join(projectPath, "templates", "values.yaml")
 	} else {
 		// User provided path → resolve relative to project
 		if !filepath.IsAbs(valuesFile) {
