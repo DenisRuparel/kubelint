@@ -13,7 +13,7 @@ tlsSecret: {
 
   // 🔥 Required TLS fields (base64 encoded)
   data: {
-    "tls.crt": string & != ""
-    "tls.key": string & != ""
+    "tls.crt": string
+    "tls.key": string
   }
 }

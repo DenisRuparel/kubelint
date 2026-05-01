@@ -81,7 +81,7 @@ var buildCmd = &cobra.Command{
 			rendered, err := renderer.RenderTemplate(filePath, values)
 			if err != nil {
 				fmt.Printf("❌ Render error in %s:\n%v\n\n", file.Name(), err)
-				continue
+				os.Exit(1)
 			}
 
 			// attach file metadata

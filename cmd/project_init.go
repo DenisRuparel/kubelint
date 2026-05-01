@@ -460,7 +460,7 @@ spec:
 }
 
 func tlsSecretContent() string {
-  return `apiVersion: v1
+	return `apiVersion: v1
 kind: Secret
 metadata:
   name: {{ .tlsSecret.name }}

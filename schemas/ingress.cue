@@ -16,7 +16,7 @@ ingress: {
 
   ingressClassName?: string & != ""
 
-  // 🔒 TLS (optional)
+  // 🔒 SIMPLE TLS (manual only)
   tls?: [...{
     hosts: [...string & != ""]
     secretName: string & != ""
@@ -42,4 +42,17 @@ ingress: {
       }]
     }
   }]
+}
+
+// 🔥 If TLS is used → require valid tlsSecret
+if ingress.tls != _|_ {
+  tlsSecret: {
+    name: string & != ""
+    namespace: string & != ""
+
+    data: {
+      "tls.crt": string & != "" & !~"<base64-cert>"
+      "tls.key": string & != "" & !~"<base64-key>"
+    }
+  }
 }

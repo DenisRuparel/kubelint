@@ -1,13 +1,15 @@
 package validators
 
 import (
+	"fmt"
+	"os"
+	"strings"
+
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
 	"cuelang.org/go/cue/errors"
 	"cuelang.org/go/cue/load"
-	"fmt"
 	"gopkg.in/yaml.v3"
-	"os"
 )
 
 // ValidateWithCUE validates values.yaml against CUE schemas
@@ -36,9 +38,9 @@ func ValidateWithCUE(valuesFile string) error {
 		return fmt.Errorf("invalid YAML format: %w", err)
 	}
 
-	// 🔥 IMPORTANT FIX: wrap under root
 	dataMap := yamlData.(map[string]interface{})
 
+	// 🔹 Encode into CUE
 	value := ctx.Encode(map[string]interface{}{
 		"deployment": dataMap["deployment"],
 		"service":    dataMap["service"],
@@ -49,21 +51,32 @@ func ValidateWithCUE(valuesFile string) error {
 		"namespace":  dataMap["namespace"],
 	})
 
-	// 🔥 Unify
+	// 🔹 Unify schema + values
 	result := schema.Unify(value)
 
-	// 🔥 Extract only concrete data
+	// 🔥 VALIDATION (THIS WAS MISSING)
 	if err := result.Validate(
 		cue.Concrete(true),
 		cue.Final(),
 	); err != nil {
-		return formatCUEError(err)
+		return enhanceCUEError(err)
 	}
 
 	return nil
 }
 
-func formatCUEError(err error) error {
+// 🔥 Custom error formatter (OUTSIDE function)
+func enhanceCUEError(err error) error {
 	details := errors.Details(err, nil)
+
+	// 🔥 TLS-specific error
+	if strings.Contains(details, "tls.crt") || strings.Contains(details, "tls.key") {
+		return fmt.Errorf(
+			"❌ TLS certificate is not configured properly.\n"+
+				"👉 Replace <base64-cert> and <base64-key> with real base64 values.\n\n%s",
+			details,
+		)
+	}
+
 	return fmt.Errorf("CUE validation failed:\n\n%s", details)
 }
