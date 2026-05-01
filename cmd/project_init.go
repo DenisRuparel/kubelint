@@ -567,7 +567,7 @@ func prodValuesContent() string {
       maxUnavailable: 0
       maxSurge: 1
 
-  serviceAccountName: my-app-sa
+  serviceAccountName: default
   automountServiceAccountToken: false
 
   terminationGracePeriodSeconds: 30
@@ -790,10 +790,6 @@ namespace:
     environment: production
     tier: backend
     managed-by: kubelint
-
-    pod-security.kubernetes.io/enforce: "restricted"
-    pod-security.kubernetes.io/audit: "restricted"
-    pod-security.kubernetes.io/warn: "restricted"
 
   annotations:
     owner: "platform-team"
