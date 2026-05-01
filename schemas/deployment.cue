@@ -1,13 +1,10 @@
 package kubelint
 
 deployment: {
-
   name: string & != ""
   namespace: string & != ""
 
-  labels: {
-    [string]: string
-  }
+  labels: [string]: string
 
   replicas: int & >0
 
@@ -33,6 +30,11 @@ deployment: {
     runAsUser?: int & >=0
     runAsGroup?: int & >=0
     fsGroup?: int & >=0
+
+    // 🔥 Required for restricted policy
+    seccompProfile?: {
+      type: "RuntimeDefault" | "Localhost"
+    }
   }
 
   containers: [...{
@@ -65,15 +67,15 @@ deployment: {
       privileged?: bool
       allowPrivilegeEscalation?: bool
       readOnlyRootFilesystem?: bool
+
+      capabilities?: {
+        drop?: [..."ALL"]
+      }
     }
 
     envFrom?: [...{
-      configMapRef?: {
-        name: string
-      }
-      secretRef?: {
-        name: string
-      }
+      configMapRef?: { name: string }
+      secretRef?: { name: string }
     }]
 
     livenessProbe?: probe
@@ -88,19 +90,14 @@ deployment: {
 
   volumes?: [...{
     name: string
-
     emptyDir?: {
       medium?: "Memory"
     }
   }]
 
-  imagePullSecrets?: [...{
-    name: string
-  }]
+  imagePullSecrets?: [...{ name: string }]
 
-  nodeSelector?: {
-    [string]: string
-  }
+  nodeSelector?: [string]: string
 
   tolerations?: [...{
     key?: string
@@ -113,6 +110,7 @@ deployment: {
   restartPolicy?: "Always" | "OnFailure" | "Never"
 }
 
+// 🔥 Probe definition
 probe: {
   httpGet?: {
     path: string
@@ -123,4 +121,24 @@ probe: {
   periodSeconds?: int & >0
   timeoutSeconds?: int & >0
   failureThreshold?: int & >0
+}
+
+// 🔥 Enforce security (CRITICAL)
+deployment: {
+  securityContext: {
+    seccompProfile: {
+      type: "RuntimeDefault"
+    }
+  }
+}
+
+deployment: {
+  containers: [...{
+    securityContext: {
+      allowPrivilegeEscalation: false
+      capabilities: {
+        drop: ["ALL"]
+      }
+    }
+  }]
 }

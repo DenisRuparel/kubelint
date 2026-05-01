@@ -179,14 +179,24 @@ metadata:
 
 spec:
   replicas: {{ .deployment.replicas }}
-  revisionHistoryLimit: {{ .deployment.revisionHistoryLimit }}
-  progressDeadlineSeconds: {{ .deployment.progressDeadlineSeconds }}
 
+{{- with .deployment.revisionHistoryLimit }}
+  revisionHistoryLimit: {{ . }}
+{{- end }}
+
+{{- with .deployment.progressDeadlineSeconds }}
+  progressDeadlineSeconds: {{ . }}
+{{- end }}
+
+{{- with .deployment.strategy }}
   strategy:
-    type: {{ .deployment.strategy.type }}
+    type: {{ .type }}
+{{- with .rollingUpdate }}
     rollingUpdate:
-      maxUnavailable: {{ .deployment.strategy.rollingUpdate.maxUnavailable }}
-      maxSurge: {{ .deployment.strategy.rollingUpdate.maxSurge }}
+      maxUnavailable: {{ .maxUnavailable }}
+      maxSurge: {{ .maxSurge }}
+{{- end }}
+{{- end }}
 
   selector:
     matchLabels:
@@ -202,15 +212,25 @@ spec:
 {{- end }}
 
     spec:
-      serviceAccountName: {{ .deployment.serviceAccountName }}
-      automountServiceAccountToken: {{ .deployment.automountServiceAccountToken }}
-      terminationGracePeriodSeconds: {{ .deployment.terminationGracePeriodSeconds }}
+{{- with .deployment.serviceAccountName }}
+      serviceAccountName: {{ . }}
+{{- end }}
+
+{{- with .deployment.automountServiceAccountToken }}
+      automountServiceAccountToken: {{ . }}
+{{- end }}
+
+{{- with .deployment.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ . }}
+{{- end }}
 
       securityContext:
         runAsNonRoot: {{ .deployment.securityContext.runAsNonRoot }}
         runAsUser: {{ .deployment.securityContext.runAsUser }}
         runAsGroup: {{ .deployment.securityContext.runAsGroup }}
         fsGroup: {{ .deployment.securityContext.fsGroup }}
+        seccompProfile:
+          type: RuntimeDefault
 
       containers:
 {{- range .deployment.containers }}
@@ -218,27 +238,35 @@ spec:
           image: {{ .image.repository }}:{{ .image.tag }}
           imagePullPolicy: {{ .imagePullPolicy }}
 
+{{- with .ports }}
           ports:
-{{- range .ports }}
+{{- range . }}
             - containerPort: {{ .containerPort }}
               name: {{ .name }}
 {{- end }}
+{{- end }}
 
+{{- with .resources }}
           resources:
             requests:
-              cpu: {{ .resources.requests.cpu }}
-              memory: {{ .resources.requests.memory }}
+              cpu: {{ .requests.cpu }}
+              memory: {{ .requests.memory }}
             limits:
-              cpu: {{ .resources.limits.cpu }}
-              memory: {{ .resources.limits.memory }}
+              cpu: {{ .limits.cpu }}
+              memory: {{ .limits.memory }}
+{{- end }}
 
           securityContext:
             privileged: {{ .securityContext.privileged }}
-            allowPrivilegeEscalation: {{ .securityContext.allowPrivilegeEscalation }}
+            allowPrivilegeEscalation: false
             readOnlyRootFilesystem: {{ .securityContext.readOnlyRootFilesystem }}
+            capabilities:
+              drop:
+                - ALL
 
+{{- with .envFrom }}
           envFrom:
-{{- range .envFrom }}
+{{- range . }}
 {{- if .configMapRef }}
             - configMapRef:
                 name: {{ .configMapRef.name }}
@@ -248,66 +276,83 @@ spec:
                 name: {{ .secretRef.name }}
 {{- end }}
 {{- end }}
+{{- end }}
 
+{{- with .livenessProbe }}
           livenessProbe:
             httpGet:
-              path: {{ .livenessProbe.httpGet.path }}
-              port: {{ .livenessProbe.httpGet.port }}
-            initialDelaySeconds: {{ .livenessProbe.initialDelaySeconds }}
-            periodSeconds: {{ .livenessProbe.periodSeconds }}
+              path: {{ .httpGet.path }}
+              port: {{ .httpGet.port }}
+            initialDelaySeconds: {{ .initialDelaySeconds }}
+            periodSeconds: {{ .periodSeconds }}
+{{- end }}
 
+{{- with .readinessProbe }}
           readinessProbe:
             httpGet:
-              path: {{ .readinessProbe.httpGet.path }}
-              port: {{ .readinessProbe.httpGet.port }}
-            initialDelaySeconds: {{ .readinessProbe.initialDelaySeconds }}
-            periodSeconds: {{ .readinessProbe.periodSeconds }}
+              path: {{ .httpGet.path }}
+              port: {{ .httpGet.port }}
+            initialDelaySeconds: {{ .initialDelaySeconds }}
+            periodSeconds: {{ .periodSeconds }}
+{{- end }}
 
+{{- with .startupProbe }}
           startupProbe:
             httpGet:
-              path: {{ .startupProbe.httpGet.path }}
-              port: {{ .startupProbe.httpGet.port }}
-            failureThreshold: {{ .startupProbe.failureThreshold }}
-            periodSeconds: {{ .startupProbe.periodSeconds }}
+              path: {{ .httpGet.path }}
+              port: {{ .httpGet.port }}
+            failureThreshold: {{ .failureThreshold }}
+            periodSeconds: {{ .periodSeconds }}
+{{- end }}
 
+{{- with .volumeMounts }}
           volumeMounts:
-{{- range .volumeMounts }}
+{{- range . }}
             - name: {{ .name }}
               mountPath: {{ .mountPath }}
 {{- end }}
 {{- end }}
+{{- end }}
 
+{{- with .deployment.volumes }}
       volumes:
-{{- range .deployment.volumes }}
+{{- range . }}
         - name: {{ .name }}
-{{- if .emptyDir.medium }}
-          emptyDir:
-            medium: {{ .emptyDir.medium }}
-{{- else }}
           emptyDir: {}
 {{- end }}
 {{- end }}
 
+{{- with .deployment.imagePullSecrets }}
       imagePullSecrets:
-{{- range .deployment.imagePullSecrets }}
+{{- range . }}
         - name: {{ .name }}
 {{- end }}
-
-      nodeSelector:
-{{- range $k, $v := .deployment.nodeSelector }}
-        {{ $k }}: {{ $v }}
 {{- end }}
 
+{{- with .deployment.nodeSelector }}
+      nodeSelector:
+{{- range $k, $v := . }}
+        {{ $k }}: {{ $v }}
+{{- end }}
+{{- end }}
+
+{{- with .deployment.tolerations }}
       tolerations:
-{{- range .deployment.tolerations }}
+{{- range . }}
         - key: "{{ .key }}"
           operator: "{{ .operator }}"
           value: "{{ .value }}"
           effect: "{{ .effect }}"
 {{- end }}
+{{- end }}
 
-      dnsPolicy: {{ .deployment.dnsPolicy }}
-      restartPolicy: {{ .deployment.restartPolicy }}
+{{- with .deployment.dnsPolicy }}
+      dnsPolicy: {{ . }}
+{{- end }}
+
+{{- with .deployment.restartPolicy }}
+      restartPolicy: {{ . }}
+{{- end }}
 `
 }
 
@@ -532,6 +577,8 @@ func prodValuesContent() string {
     runAsUser: 1000
     runAsGroup: 3000
     fsGroup: 2000
+    seccompProfile:
+      type: RuntimeDefault
 
   containers:
     - name: my-app-container
@@ -557,6 +604,9 @@ func prodValuesContent() string {
         privileged: false
         allowPrivilegeEscalation: false
         readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL
 
       envFrom:
         - configMapRef:
