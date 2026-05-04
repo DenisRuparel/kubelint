@@ -549,13 +549,13 @@ func prodValuesContent() string {
   containers:
     - name: my-app-container
       image:
-        repository: myrepo/my-app
-        tag: "1.0.0"
+        repository: nginx
+        tag: "latest"
 
       imagePullPolicy: IfNotPresent
 
       ports:
-        - containerPort: 3000
+        - containerPort: 80
           name: http
 
       resources:
