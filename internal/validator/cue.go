@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
+	"path/filepath"
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
 	"cuelang.org/go/cue/errors"
@@ -17,7 +17,18 @@ func ValidateWithCUE(valuesFile string) error {
 	ctx := cuecontext.New()
 
 	// 🔹 Load schema
-	instances := load.Instances([]string{"./schemas/..."}, nil)
+	// instances := load.Instances([]string{"./schemas/..."}, nil)
+
+	exePath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	baseDir := filepath.Dir(exePath)
+	schemaPath := filepath.Join(baseDir, "schemas")
+
+	instances := load.Instances([]string{schemaPath + "/..."}, nil)
+
 	if len(instances) == 0 {
 		return fmt.Errorf("failed to load CUE schemas")
 	}
