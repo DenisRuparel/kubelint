@@ -180,14 +180,6 @@ metadata:
 spec:
   replicas: {{ .deployment.replicas }}
 
-{{- with .deployment.revisionHistoryLimit }}
-  revisionHistoryLimit: {{ . }}
-{{- end }}
-
-{{- with .deployment.progressDeadlineSeconds }}
-  progressDeadlineSeconds: {{ . }}
-{{- end }}
-
 {{- with .deployment.strategy }}
   strategy:
     type: {{ .type }}
@@ -213,18 +205,6 @@ spec:
 
     spec:
 
-{{- with .deployment.terminationGracePeriodSeconds }}
-      terminationGracePeriodSeconds: {{ . }}
-{{- end }}
-
-      securityContext:
-        runAsNonRoot: {{ .deployment.securityContext.runAsNonRoot }}
-        runAsUser: {{ .deployment.securityContext.runAsUser }}
-        runAsGroup: {{ .deployment.securityContext.runAsGroup }}
-        fsGroup: {{ .deployment.securityContext.fsGroup }}
-        seccompProfile:
-          type: RuntimeDefault
-
       containers:
 {{- range .deployment.containers }}
         - name: {{ .name }}
@@ -248,14 +228,6 @@ spec:
               cpu: {{ .limits.cpu }}
               memory: {{ .limits.memory }}
 {{- end }}
-
-          securityContext:
-            privileged: {{ .securityContext.privileged }}
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: {{ .securityContext.readOnlyRootFilesystem }}
-            capabilities:
-              drop:
-                - ALL
 
 {{- with .envFrom }}
           envFrom:
@@ -313,14 +285,6 @@ spec:
         - name: {{ .name }}
           emptyDir: {}
 {{- end }}
-{{- end }}
-
-{{- with .deployment.dnsPolicy }}
-      dnsPolicy: {{ . }}
-{{- end }}
-
-{{- with .deployment.restartPolicy }}
-      restartPolicy: {{ . }}
 {{- end }}
 `
 }
@@ -527,24 +491,11 @@ func prodValuesContent() string {
 
   replicas: 3
 
-  revisionHistoryLimit: 5
-  progressDeadlineSeconds: 60
-
   strategy:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 0
       maxSurge: 1
-
-  terminationGracePeriodSeconds: 30
-
-  securityContext:
-    runAsNonRoot: true
-    runAsUser: 1000
-    runAsGroup: 3000
-    fsGroup: 2000
-    seccompProfile:
-      type: RuntimeDefault
 
   containers:
     - name: my-app-container
@@ -565,14 +516,6 @@ func prodValuesContent() string {
         limits:
           cpu: "500m"
           memory: "512Mi"
-
-      securityContext:
-        privileged: false
-        allowPrivilegeEscalation: false
-        readOnlyRootFilesystem: true
-        capabilities:
-          drop:
-            - ALL
 
       envFrom:
         - configMapRef:
@@ -608,9 +551,6 @@ func prodValuesContent() string {
   volumes:
     - name: tmp
       emptyDir: {}
-
-  dnsPolicy: ClusterFirst
-  restartPolicy: Always
 
 service:
   name: my-app-service
