@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"text/template"
+
+	"github.com/Masterminds/sprig/v3"
 )
 
 func RenderTemplate(filePath string, values map[string]interface{}) (string, error) {
@@ -14,8 +16,11 @@ func RenderTemplate(filePath string, values map[string]interface{}) (string, err
 		return "", fmt.Errorf("failed to read template: %v", err)
 	}
 
-	// Parse template
-	tmpl, err := template.New("k8s").Option("missingkey=error").Parse(string(content))
+	// Parse template with Sprig functions
+	tmpl, err := template.New("k8s").
+		Funcs(sprig.TxtFuncMap()).
+		Option("missingkey=zero"). // 🔥 IMPORTANT FIX
+		Parse(string(content))
 	if err != nil {
 		return "", fmt.Errorf("failed to parse template: %v", err)
 	}
