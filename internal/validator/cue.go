@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"path/filepath"
+
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
 	"cuelang.org/go/cue/errors"
-	"cuelang.org/go/cue/load"
 	"gopkg.in/yaml.v3"
 )
 
@@ -18,24 +17,18 @@ func ValidateWithCUE(valuesFile string) error {
 
 	// 🔹 Load schema
 	// instances := load.Instances([]string{"./schemas/..."}, nil)
+	// if len(instances) == 0 {
+	// 	return fmt.Errorf("failed to load CUE schemas")
+	// }
 
-	exePath, err := os.Executable()
+	// schema := ctx.BuildInstance(instances[0])
+	// if schema.Err() != nil {
+	// 	return schema.Err()
+	// }
+
+	schema, err := loadEmbeddedSchema(ctx)
 	if err != nil {
-		return err
-	}
-
-	baseDir := filepath.Dir(exePath)
-	schemaPath := filepath.Join(baseDir, "schemas")
-
-	instances := load.Instances([]string{schemaPath + "/..."}, nil)
-
-	if len(instances) == 0 {
-		return fmt.Errorf("failed to load CUE schemas")
-	}
-
-	schema := ctx.BuildInstance(instances[0])
-	if schema.Err() != nil {
-		return schema.Err()
+		return fmt.Errorf("failed to load embedded schemas: %w", err)
 	}
 
 	// 🔹 Read YAML
@@ -90,4 +83,30 @@ func enhanceCUEError(err error) error {
 	}
 
 	return fmt.Errorf("CUE validation failed:\n\n%s", details)
+}
+
+func loadEmbeddedSchema(ctx *cue.Context) (cue.Value, error) {
+	files, err := schemaFS.ReadDir("schemas")
+	if err != nil {
+		return cue.Value{}, err
+	}
+
+	var unified cue.Value
+
+	for _, file := range files {
+		data, err := schemaFS.ReadFile("schemas/" + file.Name())
+		if err != nil {
+			return cue.Value{}, err
+		}
+
+		val := ctx.CompileBytes(data)
+
+		if unified.Exists() {
+			unified = unified.Unify(val)
+		} else {
+			unified = val
+		}
+	}
+
+	return unified, nil
 }
