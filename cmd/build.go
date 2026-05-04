@@ -2,11 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/DenisRuparel/kubelint/internal/utils"
 	"github.com/DenisRuparel/kubelint/internal/loader"
 	"github.com/DenisRuparel/kubelint/internal/renderer"
 	"github.com/DenisRuparel/kubelint/internal/scanner"
-	"github.com/DenisRuparel/kubelint/internal/validator"
+	"github.com/DenisRuparel/kubelint/internal/utils"
+	validators "github.com/DenisRuparel/kubelint/internal/validator"
 	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
@@ -46,6 +46,15 @@ var buildCmd = &cobra.Command{
 			return
 		}
 
+		// 🔥 CUE VALIDATION (Phase 3)
+		if err := validators.ValidateWithCUE(localValuesFile); err != nil {
+			fmt.Println("❌ Validation Error")
+			fmt.Println("---------------------------------")
+			fmt.Println(err)
+			fmt.Println("---------------------------------")
+			os.Exit(1)
+		}
+
 		values, err := loader.LoadValues(localValuesFile)
 		if err != nil {
 			fmt.Println("❌", err)
@@ -58,7 +67,7 @@ var buildCmd = &cobra.Command{
 			return
 		}
 
-		var errors []string
+		// var errors []string
 		renderedCount := 0
 
 		// 🔥 DO NOT PRINT YAML HERE
@@ -71,10 +80,8 @@ var buildCmd = &cobra.Command{
 
 			rendered, err := renderer.RenderTemplate(filePath, values)
 			if err != nil {
-				errors = append(errors,
-					fmt.Sprintf("[%s] %v", file.Name(), err),
-				)
-				continue
+				fmt.Printf("❌ Render error in %s:\n%v\n\n", file.Name(), err)
+				os.Exit(1)
 			}
 
 			// attach file metadata
@@ -91,11 +98,16 @@ var buildCmd = &cobra.Command{
 			}
 		}
 
+		// fmt.Println("DEBUG: YAML GENERATED\n", finalOutput)
+		// fmt.Println("FILES FOUND:")
+		// for _, file := range files {
+		// 	fmt.Println("-", file.Name())
+		// }
+
 		// 🔍 VALIDATE
 		scanResult := scanner.ScanRenderedYAML(finalOutput)
 		summary := scanResult.Summary
 
-		
 		// ❌ FAILURE CASE
 		if summary.Critical > 0 {
 			fmt.Println("\n🔍 Build Validation")
