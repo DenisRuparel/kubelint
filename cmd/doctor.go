@@ -31,7 +31,7 @@ var doctorCmd = &cobra.Command{
 		section("📦 Environment")
 		checkCommand("kubectl", "kubectl")
 		checkContainerRuntime()
-		checkOptionalCommand("cue", "CUE (recommended for Phase 3)")
+		checkOptionalCommand("cue", "CUE")
 
 		fmt.Println()
 
