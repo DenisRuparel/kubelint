@@ -525,21 +525,21 @@ func prodValuesContent() string {
 
       livenessProbe:
         httpGet:
-          path: /health
+          path: /
           port: http
         initialDelaySeconds: 10
         periodSeconds: 10
 
       readinessProbe:
         httpGet:
-          path: /ready
+          path: /
           port: http
         initialDelaySeconds: 5
         periodSeconds: 5
 
       startupProbe:
         httpGet:
-          path: /health
+          path: /
           port: http
         failureThreshold: 30
         periodSeconds: 5
