@@ -212,13 +212,6 @@ spec:
 {{- end }}
 
     spec:
-{{- with .deployment.serviceAccountName }}
-      serviceAccountName: {{ . }}
-{{- end }}
-
-{{- with .deployment.automountServiceAccountToken }}
-      automountServiceAccountToken: {{ . }}
-{{- end }}
 
 {{- with .deployment.terminationGracePeriodSeconds }}
       terminationGracePeriodSeconds: {{ . }}
@@ -319,30 +312,6 @@ spec:
 {{- range . }}
         - name: {{ .name }}
           emptyDir: {}
-{{- end }}
-{{- end }}
-
-{{- with .deployment.imagePullSecrets }}
-      imagePullSecrets:
-{{- range . }}
-        - name: {{ .name }}
-{{- end }}
-{{- end }}
-
-{{- with .deployment.nodeSelector }}
-      nodeSelector:
-{{- range $k, $v := . }}
-        {{ $k }}: {{ $v }}
-{{- end }}
-{{- end }}
-
-{{- with .deployment.tolerations }}
-      tolerations:
-{{- range . }}
-        - key: "{{ .key }}"
-          operator: "{{ .operator }}"
-          value: "{{ .value }}"
-          effect: "{{ .effect }}"
 {{- end }}
 {{- end }}
 
@@ -567,9 +536,6 @@ func prodValuesContent() string {
       maxUnavailable: 0
       maxSurge: 1
 
-  serviceAccountName: default
-  automountServiceAccountToken: false
-
   terminationGracePeriodSeconds: 30
 
   securityContext:
@@ -642,18 +608,6 @@ func prodValuesContent() string {
   volumes:
     - name: tmp
       emptyDir: {}
-
-  imagePullSecrets:
-    - name: regcred
-
-  nodeSelector:
-    environment: production
-
-  tolerations:
-    - key: "dedicated"
-      operator: "Equal"
-      value: "production"
-      effect: "NoSchedule"
 
   dnsPolicy: ClusterFirst
   restartPolicy: Always
