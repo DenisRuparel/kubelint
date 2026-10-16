@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: Build, Vet, and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: true
+
+      - name: Go Vet
+        run: go vet ./...
+
+      - name: Run Tests
+        run: go test -v -race ./...
+
+      - name: Build Binary
+        run: go build -v -ldflags="-s -w" -o bin/kubelint main.go
+
+      - name: Smoke Test Binary
+        run: |
+          ./bin/kubelint --help
+          ./bin/kubelint scan examples/deployment/good-deployment.yaml
+

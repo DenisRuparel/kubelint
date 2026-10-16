@@ -4,57 +4,63 @@ import (
 	"fmt"
 	"os"
 
-	"sigs.k8s.io/yaml"
+	"gopkg.in/yaml.v3"
 )
 
+// SecurityDeployment is the typed model used for security-focused validation.
 type SecurityDeployment struct {
 	Kind string `yaml:"kind"`
 	Spec struct {
 		Template struct {
 			Spec struct {
-				Containers []struct {
-					Name string `yaml:"name"`
-
-					SecurityContext struct {
-						Privileged               *bool `yaml:"privileged"`
-						RunAsNonRoot             *bool `yaml:"runAsNonRoot"`
-						ReadOnlyRootFilesystem   *bool `yaml:"readOnlyRootFilesystem"`
-						AllowPrivilegeEscalation *bool `yaml:"allowPrivilegeEscalation"`
-					} `yaml:"securityContext"`
-
-					Resources struct {
-						Limits map[string]string `yaml:"limits"`
-					} `yaml:"resources"`
-				} `yaml:"containers"`
+				Containers []SecurityContainer `yaml:"containers"`
+				InitContainers []SecurityContainer `yaml:"initContainers"`
 			} `yaml:"spec"`
 		} `yaml:"template"`
 	} `yaml:"spec"`
 }
 
-// ValidateSecurity checks for security best practices in Deployment manifests
+// SecurityContainer holds only the fields relevant to security checks.
+type SecurityContainer struct {
+	Name      string `yaml:"name"`
+	Resources struct {
+		Limits map[string]string `yaml:"limits"`
+	} `yaml:"resources"`
+	SecurityContext struct {
+		Privileged               *bool `yaml:"privileged"`
+		RunAsNonRoot             *bool `yaml:"runAsNonRoot"`
+		ReadOnlyRootFilesystem   *bool `yaml:"readOnlyRootFilesystem"`
+		AllowPrivilegeEscalation *bool `yaml:"allowPrivilegeEscalation"`
+	} `yaml:"securityContext"`
+}
 
+// ValidateSecurity reads a file and delegates to ValidateSecurityBytes.
 func ValidateSecurity(filePath string) []ValidationResult {
-	var results []ValidationResult
-
-	content, err := os.ReadFile(filePath)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
-		results = append(results, ValidationResult{
+		return []ValidationResult{{
 			File:     filePath,
 			Severity: Critical,
-			Message:  "Failed to read file for security validation",
-		})
-		return results
+			Message:  "Failed to read file: " + err.Error(),
+		}}
 	}
 
+	results := ValidateSecurityBytes(data)
+	for i := range results {
+		results[i].File = filePath
+	}
+	return results
+}
+
+// ValidateSecurityBytes validates security settings in raw YAML content.
+// Bug fix: previously never called yaml.Unmarshal, so deployment was always
+// a zero-value struct and all checks were silently skipped.
+func ValidateSecurityBytes(content []byte) []ValidationResult {
+	var results []ValidationResult
 	var deployment SecurityDeployment
 
-	err = yaml.Unmarshal(content, &deployment)
-	if err != nil {
-		results = append(results, ValidationResult{
-			File:     filePath,
-			Severity: Critical,
-			Message:  fmt.Sprintf("Failed to parse security validation: %v", err),
-		})
+	if err := yaml.Unmarshal(content, &deployment); err != nil {
+		// Not our document to validate; not a parse error we own.
 		return results
 	}
 
@@ -62,120 +68,59 @@ func ValidateSecurity(filePath string) []ValidationResult {
 		return results
 	}
 
-	for _, c := range deployment.Spec.Template.Spec.Containers {
-
-		if c.SecurityContext.Privileged == nil {
-			results = append(results, ValidationResult{
-				File:     filePath,
-				Severity: Warning,
-				Message:  fmt.Sprintf("Container '%s' should explicitly define privileged=false", c.Name),
-			})
-		}
-
-		if c.SecurityContext.RunAsNonRoot == nil ||
-			!*c.SecurityContext.RunAsNonRoot {
-			results = append(results, ValidationResult{
-				File:     filePath,
-				Severity: Warning,
-				Message:  fmt.Sprintf("Container '%s' should set runAsNonRoot=true", c.Name),
-			})
-		}
-
-		if c.SecurityContext.ReadOnlyRootFilesystem == nil ||
-			!*c.SecurityContext.ReadOnlyRootFilesystem {
-			results = append(results, ValidationResult{
-				File:     filePath,
-				Severity: Warning,
-				Message:  fmt.Sprintf("Container '%s' should set readOnlyRootFilesystem=true", c.Name),
-			})
-		}
-
-		if c.SecurityContext.AllowPrivilegeEscalation == nil ||
-			*c.SecurityContext.AllowPrivilegeEscalation {
-			results = append(results, ValidationResult{
-				File:     filePath,
-				Severity: Warning,
-				Message:  fmt.Sprintf("Container '%s' should set allowPrivilegeEscalation=false", c.Name),
-			})
-		}
-
-		if _, exists := c.Resources.Limits["cpu"]; !exists {
-			results = append(results, ValidationResult{
-				File:     filePath,
-				Severity: Warning,
-				Message:  fmt.Sprintf("Container '%s' should define CPU limits", c.Name),
-			})
-		}
-
-		if _, exists := c.Resources.Limits["memory"]; !exists {
-			results = append(results, ValidationResult{
-				File:     filePath,
-				Severity: Warning,
-				Message:  fmt.Sprintf("Container '%s' should define Memory limits", c.Name),
-			})
-		}
+	allContainers := append(deployment.Spec.Template.Spec.Containers, deployment.Spec.Template.Spec.InitContainers...)
+	for _, c := range allContainers {
+		results = append(results, checkContainerSecurity(c)...)
 	}
 
 	return results
 }
 
-// ValidateSecurityBytes is a helper for validating security in YAML content without file I/O
-
-func ValidateSecurityBytes(content []byte) []ValidationResult {
+// checkContainerSecurity runs all security checks for a single container.
+func checkContainerSecurity(c SecurityContainer) []ValidationResult {
 	var results []ValidationResult
+	name := c.Name
 
-	var deployment SecurityDeployment
-
-	if deployment.Kind != "Deployment" {
-		return results
+	if c.SecurityContext.Privileged == nil {
+		results = append(results, ValidationResult{
+			Severity: Warning,
+			Message:  fmt.Sprintf("Container '%s': privileged not set (should be false)", name),
+		})
 	}
 
-	for _, c := range deployment.Spec.Template.Spec.Containers {
+	if c.SecurityContext.RunAsNonRoot == nil || !*c.SecurityContext.RunAsNonRoot {
+		results = append(results, ValidationResult{
+			Severity: Warning,
+			Message:  fmt.Sprintf("Container '%s': runAsNonRoot should be true", name),
+		})
+	}
 
-		if c.SecurityContext.Privileged == nil {
-			results = append(results, ValidationResult{
-				Severity: Warning,
-				Message:  fmt.Sprintf("Container '%s' should explicitly define privileged=false", c.Name),
-			})
-		}
+	if c.SecurityContext.ReadOnlyRootFilesystem == nil || !*c.SecurityContext.ReadOnlyRootFilesystem {
+		results = append(results, ValidationResult{
+			Severity: Warning,
+			Message:  fmt.Sprintf("Container '%s': readOnlyRootFilesystem should be true", name),
+		})
+	}
 
-		if c.SecurityContext.RunAsNonRoot == nil ||
-			!*c.SecurityContext.RunAsNonRoot {
-			results = append(results, ValidationResult{
-				Severity: Warning,
-				Message:  fmt.Sprintf("Container '%s' should set runAsNonRoot=true", c.Name),
-			})
-		}
+	if c.SecurityContext.AllowPrivilegeEscalation == nil || *c.SecurityContext.AllowPrivilegeEscalation {
+		results = append(results, ValidationResult{
+			Severity: Warning,
+			Message:  fmt.Sprintf("Container '%s': allowPrivilegeEscalation should be false", name),
+		})
+	}
 
-		if c.SecurityContext.ReadOnlyRootFilesystem == nil ||
-			!*c.SecurityContext.ReadOnlyRootFilesystem {
-			results = append(results, ValidationResult{
-				Severity: Warning,
-				Message:  fmt.Sprintf("Container '%s' should set readOnlyRootFilesystem=true", c.Name),
-			})
-		}
+	if _, ok := c.Resources.Limits["cpu"]; !ok {
+		results = append(results, ValidationResult{
+			Severity: Warning,
+			Message:  fmt.Sprintf("Container '%s': CPU limit not set", name),
+		})
+	}
 
-		if c.SecurityContext.AllowPrivilegeEscalation == nil ||
-			*c.SecurityContext.AllowPrivilegeEscalation {
-			results = append(results, ValidationResult{
-				Severity: Warning,
-				Message:  fmt.Sprintf("Container '%s' should set allowPrivilegeEscalation=false", c.Name),
-			})
-		}
-
-		if _, exists := c.Resources.Limits["cpu"]; !exists {
-			results = append(results, ValidationResult{
-				Severity: Warning,
-				Message:  fmt.Sprintf("Container '%s' should define CPU limits", c.Name),
-			})
-		}
-
-		if _, exists := c.Resources.Limits["memory"]; !exists {
-			results = append(results, ValidationResult{
-				Severity: Warning,
-				Message:  fmt.Sprintf("Container '%s' should define Memory limits", c.Name),
-			})
-		}
+	if _, ok := c.Resources.Limits["memory"]; !ok {
+		results = append(results, ValidationResult{
+			Severity: Warning,
+			Message:  fmt.Sprintf("Container '%s': memory limit not set", name),
+		})
 	}
 
 	return results

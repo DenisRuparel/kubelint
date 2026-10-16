@@ -15,23 +15,11 @@ import (
 func ValidateWithCUE(valuesFile string) error {
 	ctx := cuecontext.New()
 
-	// 🔹 Load schema
-	// instances := load.Instances([]string{"./schemas/..."}, nil)
-	// if len(instances) == 0 {
-	// 	return fmt.Errorf("failed to load CUE schemas")
-	// }
-
-	// schema := ctx.BuildInstance(instances[0])
-	// if schema.Err() != nil {
-	// 	return schema.Err()
-	// }
-
 	schema, err := loadEmbeddedSchema(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to load embedded schemas: %w", err)
 	}
 
-	// 🔹 Read YAML
 	data, err := os.ReadFile(valuesFile)
 	if err != nil {
 		return fmt.Errorf("failed to read values file: %w", err)
@@ -42,41 +30,51 @@ func ValidateWithCUE(valuesFile string) error {
 		return fmt.Errorf("invalid YAML format: %w", err)
 	}
 
-	dataMap := yamlData.(map[string]interface{})
+	dataMap, ok := yamlData.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("values file must contain a YAML mapping")
+	}
 
-	// 🔹 Encode into CUE
-	value := ctx.Encode(map[string]interface{}{
-		"deployment": dataMap["deployment"],
-		"service":    dataMap["service"],
-		"configMap":  dataMap["configMap"],
-		"secret":     dataMap["secret"],
-		"tlsSecret":  dataMap["tlsSecret"],
-		"ingress":    dataMap["ingress"],
-		"namespace":  dataMap["namespace"],
-	})
+	// 🔹 Only encode resource sections that are actually present in values.yaml
+	// This ensures projects with only a Deployment or Service aren't falsely forced
+	// to define Ingress, TLS, etc.
+	knownSections := []string{"deployment", "service", "configMap", "secret", "tlsSecret", "ingress", "namespace"}
+	encodedMap := make(map[string]interface{})
+	hasTLSSecret := false
+
+	for _, section := range knownSections {
+		if val, exists := dataMap[section]; exists && val != nil {
+			encodedMap[section] = val
+			if section == "tlsSecret" {
+				hasTLSSecret = true
+			}
+		}
+	}
+
+	value := ctx.Encode(encodedMap)
 
 	// 🔹 Unify schema + values
 	result := schema.Unify(value)
 
-	// 🔥 VALIDATION (THIS WAS MISSING)
+	// Validate concrete and final
 	if err := result.Validate(
 		cue.Concrete(true),
 		cue.Final(),
 	); err != nil {
-		return enhanceCUEError(err)
+		return enhanceCUEError(err, hasTLSSecret)
 	}
 
 	return nil
 }
 
-// 🔥 Custom error formatter (OUTSIDE function)
-func enhanceCUEError(err error) error {
+// enhanceCUEError formats CUE validation errors into user-friendly messages
+func enhanceCUEError(err error, hadTLS bool) error {
 	details := errors.Details(err, nil)
 
-	// 🔥 TLS-specific error
-	if strings.Contains(details, "tls.crt") || strings.Contains(details, "tls.key") {
+	// Only show TLS remediation if the user actually configured tlsSecret
+	if hadTLS && (strings.Contains(details, "tls.crt") || strings.Contains(details, "tls.key")) {
 		return fmt.Errorf(
-			"❌ TLS certificate is not configured properly.\n"+
+			"❌ TLS certificate is not configured properly in tlsSecret.\n"+
 				"👉 Replace <base64-cert> and <base64-key> with real base64 values.\n\n%s",
 			details,
 		)

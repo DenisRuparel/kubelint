@@ -1,0 +1,29 @@
+# Binaries
+bin/
+dist/
+kubelint
+
+# Test and coverage artifacts
+*.out
+*.test
+coverage.html
+
+# Go build cache
+.cache/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# IDE configurations
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Local development / sensitive values
+# Recommend using values.yaml.example instead of committing real values
+values.local.yaml
+*.local.yaml
+

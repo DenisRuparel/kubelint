@@ -2,7 +2,7 @@ package kubelint
 
 #PathType: "Prefix" | "Exact" | "ImplementationSpecific"
 
-ingress: {
+ingress?: {
   name: string & != ""
   namespace: string & != ""
 

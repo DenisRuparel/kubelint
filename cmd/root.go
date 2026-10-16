@@ -13,12 +13,14 @@ var rootCmd = &cobra.Command{
 	Long: `KubeLint is a production-grade Kubernetes linting tool
 that validates YAML manifests using best practices,
 security checks, and deployment standards.`,
+	SilenceUsage:  true,
+	SilenceErrors: true,
 }
 
 // Execute runs the root command
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }

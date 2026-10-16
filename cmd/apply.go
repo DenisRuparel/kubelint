@@ -2,14 +2,14 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/DenisRuparel/kubelint/internal/builder"
-	"github.com/DenisRuparel/kubelint/internal/scanner"
-	"github.com/DenisRuparel/kubelint/internal/validator"
-	"github.com/DenisRuparel/kubelint/internal/utils"
-	"github.com/spf13/cobra"
-	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/DenisRuparel/kubelint/internal/builder"
+	"github.com/DenisRuparel/kubelint/internal/scanner"
+	"github.com/DenisRuparel/kubelint/internal/utils"
+	validators "github.com/DenisRuparel/kubelint/internal/validator"
+	"github.com/spf13/cobra"
 )
 
 var applyValues string
@@ -19,22 +19,18 @@ var applyCmd = &cobra.Command{
 	Short: "Render and apply Kubernetes manifests",
 	Args:  cobra.ExactArgs(1),
 
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath := args[0]
 
 		fmt.Println("Applying KubeLint manifests...")
 
 		output, err := builder.Build(projectPath, applyValues)
-
 		if err != nil {
-			fmt.Println("❌", err)
-			os.Exit(1)
+			return fmt.Errorf("build failed before apply: %w", err)
 		}
 
 		scanResult := scanner.ScanRenderedYAML(output)
 		summary := scanResult.Summary
-
-		// fmt.Println("DEBUG APPLY OUTPUT:\n", output)
 
 		fmt.Println("\n🔍 Apply Summary")
 		fmt.Println("---------------------------------")
@@ -54,10 +50,8 @@ var applyCmd = &cobra.Command{
 			}
 
 			fmt.Println("---------------------------------")
-			fmt.Println()
-			fmt.Println("❌ Deployment blocked due to critical issues.")
-			fmt.Println()
-			os.Exit(1)
+			fmt.Println("\n❌ Deployment blocked due to critical issues.")
+			return fmt.Errorf("deployment blocked: %d critical issue(s) detected", summary.Critical)
 		}
 
 		// kubectl apply -f -
@@ -67,17 +61,17 @@ var applyCmd = &cobra.Command{
 
 		out, err := kubectl.CombinedOutput()
 		if err != nil {
-			fmt.Println()
-			fmt.Println("❌ kubectl apply failed:")
+			fmt.Println("\n❌ kubectl apply failed:")
 			fmt.Println("---------------------------------")
 			fmt.Println(string(out))
 			fmt.Println("---------------------------------")
 			fmt.Println("💡 Tip: Run `kubelint build` to see which resource is broken")
-			os.Exit(1)
+			return fmt.Errorf("kubectl apply failed: %w", err)
 		}
 
 		fmt.Println("✔ Applied successfully")
 		fmt.Println(string(out))
+		return nil
 	},
 }
 

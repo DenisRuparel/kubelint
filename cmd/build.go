@@ -2,113 +2,33 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/DenisRuparel/kubelint/internal/loader"
-	"github.com/DenisRuparel/kubelint/internal/renderer"
+
+	"github.com/DenisRuparel/kubelint/internal/builder"
 	"github.com/DenisRuparel/kubelint/internal/scanner"
 	"github.com/DenisRuparel/kubelint/internal/utils"
 	validators "github.com/DenisRuparel/kubelint/internal/validator"
 	"github.com/spf13/cobra"
-	"os"
-	"path/filepath"
 )
 
 var valuesFile string
-var finalOutput string
 
 var buildCmd = &cobra.Command{
 	Use:   "build [project-path]",
 	Short: "Render Kubernetes templates with values",
 	Args:  cobra.ExactArgs(1),
 
-	Run: func(cmd *cobra.Command, args []string) {
-
-		finalOutput = ""
-
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath := args[0]
-		templateDir := filepath.Join(projectPath, "templates")
 
-		// Resolve values file safely
-		localValuesFile := valuesFile
-		if localValuesFile == "" {
-			localValuesFile = filepath.Join(templateDir, "values.yaml")
-		}
-
-		// fmt.Println("Starting KubeLint build...")
-
-		// Path checks
-		if _, err := os.Stat(templateDir); os.IsNotExist(err) {
-			fmt.Println("❌ templates folder not found")
-			return
-		}
-
-		if _, err := os.Stat(localValuesFile); os.IsNotExist(err) {
-			fmt.Println("❌ values.yaml not found")
-			return
-		}
-
-		// 🔥 CUE VALIDATION (Phase 3)
-		if err := validators.ValidateWithCUE(localValuesFile); err != nil {
-			fmt.Println("❌ Validation Error")
-			fmt.Println("---------------------------------")
-			fmt.Println(err)
-			fmt.Println("---------------------------------")
-			os.Exit(1)
-		}
-
-		values, err := loader.LoadValues(localValuesFile)
+		output, err := builder.Build(projectPath, valuesFile)
 		if err != nil {
-			fmt.Println("❌", err)
-			return
+			return fmt.Errorf("build failed: %w", err)
 		}
 
-		files, err := os.ReadDir(templateDir)
-		if err != nil {
-			fmt.Println("❌ Failed to read templates directory")
-			return
-		}
-
-		// var errors []string
-		renderedCount := 0
-
-		// 🔥 DO NOT PRINT YAML HERE
-		for _, file := range files {
-			if file.IsDir() || file.Name() == "values.yaml" {
-				continue
-			}
-
-			filePath := filepath.Join(templateDir, file.Name())
-
-			rendered, err := renderer.RenderTemplate(filePath, values)
-			if err != nil {
-				fmt.Printf("❌ Render error in %s:\n%v\n\n", file.Name(), err)
-				os.Exit(1)
-			}
-
-			// attach file metadata
-			rendered = fmt.Sprintf("# FILE: %s\n%s", filePath, rendered)
-
-			renderedCount++
-
-			// accumulate ONLY
-			finalOutput += "---\n"
-			finalOutput += rendered
-
-			if len(rendered) > 0 && rendered[len(rendered)-1] != '\n' {
-				finalOutput += "\n"
-			}
-		}
-
-		// fmt.Println("DEBUG: YAML GENERATED\n", finalOutput)
-		// fmt.Println("FILES FOUND:")
-		// for _, file := range files {
-		// 	fmt.Println("-", file.Name())
-		// }
-
-		// 🔍 VALIDATE
-		scanResult := scanner.ScanRenderedYAML(finalOutput)
+		// Validate rendered YAML
+		scanResult := scanner.ScanRenderedYAML(output)
 		summary := scanResult.Summary
 
-		// ❌ FAILURE CASE
 		if summary.Critical > 0 {
 			fmt.Println("\n🔍 Build Validation")
 			fmt.Println("---------------------------------")
@@ -116,7 +36,6 @@ var buildCmd = &cobra.Command{
 			fmt.Printf("WARNING  : %d\n", summary.Warning)
 			fmt.Printf("INFO     : %d\n", summary.Info)
 			fmt.Println("---------------------------------")
-			fmt.Println()
 			fmt.Println("\n⚠️ Build Issues detected:")
 			fmt.Println("---------------------------------")
 
@@ -127,33 +46,13 @@ var buildCmd = &cobra.Command{
 			}
 
 			fmt.Println("---------------------------------")
-
-			fmt.Println("\n🚀 Build Summary")
-			fmt.Println("---------------------------------")
-			fmt.Printf("Templates rendered : %d\n", renderedCount)
-			fmt.Printf("Critical Issues    : %d\n", summary.Critical)
-			fmt.Printf("Warnings           : %d\n", summary.Warning)
-			fmt.Printf("Info               : %d\n", summary.Info)
-			fmt.Println("Status             : FAILED ❌")
-			fmt.Println("---------------------------------")
-
-			os.Exit(1)
+			fmt.Println("Status: FAILED ❌")
+			return fmt.Errorf("build validation failed with %d critical issue(s)", summary.Critical)
 		}
 
-		// ✅ SUCCESS CASE → NOW PRINT YAML
-		// fmt.Println("\nRendering templates...")
-		fmt.Println()
-		clean := utils.CleanYAML(finalOutput)
+		clean := utils.CleanYAML(output)
 		fmt.Print(clean)
-
-		// fmt.Println("\n🚀 Build Summary")
-		// fmt.Println("---------------------------------")
-		// fmt.Printf("Templates rendered : %d\n", renderedCount)
-		// fmt.Printf("Critical Issues    : %d\n", summary.Critical)
-		// fmt.Printf("Warnings           : %d\n", summary.Warning)
-		// fmt.Printf("Info               : %d\n", summary.Info)
-		// fmt.Println("Status             : SUCCESS ✅")
-		// fmt.Println("---------------------------------")
+		return nil
 	},
 }
 

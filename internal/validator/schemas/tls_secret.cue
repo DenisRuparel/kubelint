@@ -1,6 +1,6 @@
 package kubelint
 
-tlsSecret: {
+tlsSecret?: {
   name: string & != ""
   namespace: string & != ""
 
@@ -13,7 +13,7 @@ tlsSecret: {
 
   // 🔥 Required TLS fields (base64 encoded)
   data: {
-    "tls.crt": string
-    "tls.key": string
+    "tls.crt": string & != "" & !="<base64-cert>"
+    "tls.key": string & != "" & !="<base64-key>"
   }
 }
