@@ -2,7 +2,7 @@ package kubelint
 
 #ServiceType: "ClusterIP" | "NodePort" | "LoadBalancer"
 
-service: {
+service?: {
   name: string & != ""
   namespace: string & != ""
 

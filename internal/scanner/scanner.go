@@ -6,14 +6,14 @@ import (
 	"path/filepath"
 )
 
+// CollectYAMLFiles gathers all .yaml and .yml manifest files from the specified paths.
 func CollectYAMLFiles(paths []string) ([]string, error) {
 	var yamlFiles []string
 
 	for _, path := range paths {
 		info, err := os.Stat(path)
 		if err != nil {
-			fmt.Printf("Skipping invalid path: %s\n", path)
-			continue
+			return nil, fmt.Errorf("cannot access path %q: %w", path, err)
 		}
 
 		// If single file
@@ -27,10 +27,10 @@ func CollectYAMLFiles(paths []string) ([]string, error) {
 		// If directory → recursive scan
 		err = filepath.Walk(path, func(filePath string, fileInfo os.FileInfo, err error) error {
 			if err != nil {
-				return nil
+				return err
 			}
 
-			// Skip hidden directories
+			// Skip hidden directories (like .git, .github)
 			if fileInfo.IsDir() && len(fileInfo.Name()) > 0 && fileInfo.Name()[0] == '.' {
 				return filepath.SkipDir
 			}
@@ -48,7 +48,7 @@ func CollectYAMLFiles(paths []string) ([]string, error) {
 	}
 
 	if len(yamlFiles) == 0 {
-		return nil, fmt.Errorf("no YAML files found")
+		return nil, fmt.Errorf("no YAML files found in provided paths")
 	}
 
 	return yamlFiles, nil
@@ -62,8 +62,9 @@ func isYAMLFile(path string) bool {
 		return false
 	}
 
-	// Ignore config and values files
+	// Ignore config and values files from direct manifest scanning
 	if base == ".kubelint.yaml" ||
+		base == ".kubelint.yml" ||
 		base == "values.yaml" ||
 		base == "values.yml" {
 		return false

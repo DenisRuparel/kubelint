@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/DenisRuparel/kubelint/internal/scanner"
-	"github.com/DenisRuparel/kubelint/internal/validator"
+	validators "github.com/DenisRuparel/kubelint/internal/validator"
 	"github.com/spf13/cobra"
 )
 
@@ -13,13 +14,12 @@ var scanCmd = &cobra.Command{
 	Short: "Scan Kubernetes YAML files for issues",
 	Args:  cobra.MinimumNArgs(1),
 
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Println("Starting KubeLint scan...")
 
 		yamlFiles, err := scanner.CollectYAMLFiles(args)
 		if err != nil {
-			fmt.Println("Error:", err)
-			return
+			return fmt.Errorf("failed to collect YAML files: %w", err)
 		}
 
 		criticalCount := 0
@@ -27,48 +27,44 @@ var scanCmd = &cobra.Command{
 		infoCount := 0
 
 		for _, file := range yamlFiles {
+			// Read file ONCE from disk (fixes bug #4: 7-9 repeated file reads)
+			data, err := os.ReadFile(file)
+			if err != nil {
+				criticalCount++
+				fmt.Printf("\nScanning: %s\n", file)
+				fmt.Printf("[CRITICAL] Failed to read file: %v\n", err)
+				continue
+			}
+
 			var results []validators.ValidationResult
 
 			// YAML syntax validation
-			syntaxResult := validators.ValidateYAMLSyntax(file)
+			syntaxResult := validators.ValidateYAMLSyntaxBytes(data)
+			syntaxResult.File = file
 			results = append(results, syntaxResult)
 
-			// Continue only if syntax is valid
+			// Continue with deep validation only if syntax is valid
 			if syntaxResult.Severity != validators.Critical {
-				// Step 2: Common validation for all resources
-				commonResults := validators.ValidateCommon(file)
-				results = append(results, commonResults...)
+				appendResults := func(res []validators.ValidationResult) {
+					for _, r := range res {
+						r.File = file
+						results = append(results, r)
+					}
+				}
 
-				// Step 3: Structure validation
-				structureResult := validators.ValidateStructure(file)
-				results = append(results, structureResult)
+				appendResults(validators.ValidateCommonBytes(data))
 
-				// Step 4: Deployment-specific validation
-				deploymentResults := validators.ValidateDeployment(file)
-				results = append(results, deploymentResults...)
+				structRes := validators.ValidateStructureBytes(data)
+				structRes.File = file
+				results = append(results, structRes)
 
-				securityResults := validators.ValidateSecurity(file)
-				results = append(results, securityResults...)
-
-				// Step 5: Service-specific validation
-				serviceResults := validators.ValidateService(file)
-				results = append(results, serviceResults...)
-
-				// Step 6: ConfigMap-specific validation
-				configMapResults := validators.ValidateConfigMap(file)
-				results = append(results, configMapResults...)
-
-				// Step 7: Secret-specific validation
-				secretResults := validators.ValidateSecret(file)
-				results = append(results, secretResults...)
-
-				// Step 8: Ingress-specific validation
-				ingressResults := validators.ValidateIngress(file)
-				results = append(results, ingressResults...)
-
-				// Step 9: Namespace-specific validation
-				namespaceResults := validators.ValidateNamespacePolicy(file)
-				results = append(results, namespaceResults...)
+				appendResults(validators.ValidateDeploymentBytes(data))
+				appendResults(validators.ValidateSecurityBytes(data))
+				appendResults(validators.ValidateServiceBytes(data))
+				appendResults(validators.ValidateConfigMapBytes(data))
+				appendResults(validators.ValidateSecretBytes(data))
+				appendResults(validators.ValidateIngressBytes(data))
+				appendResults(validators.ValidateNamespacePolicyBytes(data))
 			}
 
 			fmt.Println()
@@ -98,8 +94,6 @@ var scanCmd = &cobra.Command{
 			if fileScore < 0 {
 				fileScore = 0
 			}
-
-			// fmt.Printf("\nScore: %d/100\n\n", fileScore)
 		}
 
 		overallScore := 100 - (criticalCount * 20) - (warningCount * 10)
@@ -127,14 +121,14 @@ var scanCmd = &cobra.Command{
 			fmt.Printf("\nOverall Score : %d/100\n", overallScore)
 			fmt.Printf("Status        : %s\n", status)
 			fmt.Println("---------------------------------------")
-
-		} else {
-			fmt.Println("\n------------ SCAN FAILED ------------")
-			fmt.Printf("CRITICAL : %d\n", criticalCount)
-
-			fmt.Println("\nPlease resolve critical issues before proceeding.")
-			fmt.Println("---------------------------------------")
+			return nil
 		}
+
+		fmt.Println("\n------------ SCAN FAILED ------------")
+		fmt.Printf("CRITICAL : %d\n", criticalCount)
+		fmt.Println("\nPlease resolve critical issues before proceeding.")
+		fmt.Println("---------------------------------------")
+		return fmt.Errorf("scan failed with %d critical issue(s)", criticalCount)
 	},
 }
 

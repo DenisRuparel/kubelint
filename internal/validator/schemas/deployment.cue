@@ -1,6 +1,6 @@
 package kubelint
 
-deployment: {
+deployment?: {
   name: string & != ""
   namespace: string & != ""
 
@@ -124,7 +124,7 @@ probe: {
 }
 
 // 🔥 Enforce security (CRITICAL)
-deployment: {
+deployment?: {
   securityContext: {
     seccompProfile: {
       type: "RuntimeDefault"
@@ -132,7 +132,7 @@ deployment: {
   }
 }
 
-deployment: {
+deployment?: {
   containers: [...{
     securityContext: {
       allowPrivilegeEscalation: false

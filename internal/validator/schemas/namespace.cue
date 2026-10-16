@@ -1,6 +1,6 @@
 package kubelint
 
-namespace: {
+namespace?: {
   name: string & != ""
 
   labels?: {

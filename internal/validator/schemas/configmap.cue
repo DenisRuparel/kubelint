@@ -1,6 +1,6 @@
 package kubelint
 
-configMap: {
+configMap?: {
   name: string & != ""
   namespace: string & != ""
 

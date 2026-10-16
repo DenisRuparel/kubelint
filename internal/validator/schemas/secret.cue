@@ -2,7 +2,7 @@ package kubelint
 
 #SecretType: "Opaque" | "kubernetes.io/dockerconfigjson" | "kubernetes.io/tls"
 
-secret: {
+secret?: {
   name: string & != ""
   namespace: string & != ""
 
